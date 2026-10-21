@@ -1,0 +1,24 @@
+{
+  "name": "gym-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gym management system — members, memberships, payments, trainers, attendance",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "db:migrate": "npm run db:migrate --workspace server",
+    "db:seed": "npm run db:seed --workspace server",
+    "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-db.ps1",
+    "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-db.ps1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
