@@ -170,6 +170,7 @@ Gym name, currency, timezone, alert window and the expired-check-in rule are edi
 │   │   └── server.ts        startup, cron, graceful shutdown
 │   └── .env.example
 ├── scripts/                 Windows local-database helpers
+├── supabase/                PostgreSQL schema, seed and pg_cron job for Supabase
 ├── docker-compose.yml       MySQL 8.4 service
 ├── PLAN.md                  original plan and delivery phases
 └── README.md
@@ -276,6 +277,18 @@ Checklist:
 - Use HTTPS — refresh cookies are `secure` in production.
 - Run migrations as part of your deploy (`npm run db:migrate`).
 - Don't run `db:seed` in production.
+
+---
+
+## Supabase / PostgreSQL
+
+The app ships with a MySQL backend. A tested PostgreSQL version of the schema lives in
+`supabase/` (`schema.sql`, `seed.sql`, `cron.sql`) with a full porting guide in
+[`SUPABASE.md`](SUPABASE.md).
+
+Running on Supabase requires switching the API from `mysql2` to `pg` — the SQL alone is not enough,
+because the current code uses MySQL-only syntax and unquoted camelCase aliases. See `SUPABASE.md`
+§4 for the exact list of changes.
 
 ---
 
