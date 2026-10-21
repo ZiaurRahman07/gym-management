@@ -1,21 +1,23 @@
-# Gym Management System — Implementation Plan
+# Gym Management System - Implementation Plan
 
-> **Status: implemented.** See `README.md` for setup, demo accounts and the API overview.
-> Deviations from the original plan: no Knex (a small SQL migration runner is used instead), member
+> **Status: implemented.** The app now runs on **PostgreSQL** (Supabase-compatible) through `pg`;
+> the MySQL references below are kept as the original historical plan only. See `README.md` and
+> `SUPABASE.md` for the current setup.
+> Deviations from the original plan: no Knex (a small SQL schema runner is used instead), member
 > photos are URLs rather than uploads, QR check-in was left out of v1, and there is no automated test
-> suite yet (the API was smoke-tested end to end).
+> suite checked in (the API was smoke-tested end to end).
 
 **Goal:** A web app to manage gym members, membership plans, subscriptions, payments, trainers, and
 attendance, with an admin dashboard, expiry alerts, and reports.
 
-**Stack:** React (Vite) + Node.js/Express + MySQL
+**Stack:** React (Vite) + Node.js/Express + PostgreSQL
 **Target:** Single-gym deployment first, structured so multi-branch can be added later.
 
 ---
 
 ## 1. Assumptions
 
-These are the defaults the plan is built on. Anything marked ⚠ is worth confirming before Phase 3.
+These are the defaults the plan is built on.
 
 | Area | Assumption |
 |---|---|
@@ -23,9 +25,9 @@ These are the defaults the plan is built on. Anything marked ⚠ is worth confir
 | Roles | `admin` (full access), `receptionist` (members, payments, attendance), `trainer` (own members + attendance only). |
 | Auth | Email + password, JWT access token (15 min) + refresh token (7 days, httpOnly cookie). |
 | Plans | Fixed-duration plans (30/90/180/365 days) with a price. No class/session packages in v1. |
-| Payments | Recorded manually (cash/card/bank transfer) by staff. No online gateway in v1. ⚠ |
+| Payments | Recorded manually (cash/card/bank transfer) by staff. No online gateway in v1. |
 | Currency | Configurable via `CURRENCY` env var; money stored as `DECIMAL(10,2)`. |
-| Alerts | In-app notifications + dashboard widget. No email/SMS provider in v1. ⚠ |
+| Alerts | In-app notifications + dashboard widget. No email/SMS provider in v1. |
 | Attendance | Manual check-in by staff, plus optional QR code per member (Phase 6). |
 | Timezone | Store UTC, display in gym's local timezone (`GYM_TIMEZONE`). |
 
@@ -45,8 +47,8 @@ Express API  ──►  MySQL 8
 
 **Key choices**
 
-- **TypeScript on both sides** — shared request/response types in a `shared/` folder.
-- **MySQL access:** `mysql2/promise` pool + **Knex** for migrations/seeds only. All queries parameterized. (Alternative: Prisma — better DX, heavier migration story. Knex recommended for SQL control.)
+- **TypeScript on both sides** - shared request/response types in a `shared/` folder.
+- **MySQL access:** `mysql2/promise` pool + **Knex** for migrations/seeds only. All queries parameterized. (Alternative: Prisma - better DX, heavier migration story. Knex recommended for SQL control.)
 - **Validation:** `zod` schemas reused between server validators and client forms.
 - **Money:** never float. `DECIMAL(10,2)` in DB, integer cents or decimal strings in JS.
 - **Dates:** `DATE` for subscription boundaries, `DATETIME` (UTC) for events.
@@ -77,7 +79,7 @@ Express API  ──►  MySQL 8
 
 **Business rules**
 
-1. A member has **at most one `active` subscription** — enforced in application logic inside a transaction (MySQL can't express this as a simple unique index).
+1. A member has **at most one `active` subscription** - enforced in application logic inside a transaction (MySQL can't express this as a simple unique index).
 2. Extending a membership creates a **new subscription** starting the day after the current one ends (renewal), not an update.
 3. `final_amount = price_at_purchase - discount`; reject negative totals.
 4. A payment can exist without a subscription (e.g. merchandise/day pass) but a *new subscription* requires a payment unless marked `comp`.
@@ -152,15 +154,15 @@ client/src/
 **Screens (v1)**
 
 1. **Login**
-2. **Dashboard** — active members, revenue this month, check-ins today, expiring in 7 days, revenue chart (last 12 months), recent payments, alert list.
-3. **Members** — searchable/filterable table, add/edit modal or page, detail page with tabs (Overview / Subscriptions / Payments / Attendance).
-4. **Plans** — CRUD table.
-5. **Subscriptions** — list with status + expiry badges; new/renew flow with plan picker and payment capture.
-6. **Payments** — list, filter by date range, record payment, receipt print view.
-7. **Attendance** — today's console: quick member search → check in, list of who's in the gym, check out.
-8. **Trainers** — CRUD, assign members, view assigned roster.
-9. **Reports** — date-range pickers, charts + tables, CSV export.
-10. **Settings / Users** — admin only.
+2. **Dashboard** - active members, revenue this month, check-ins today, expiring in 7 days, revenue chart (last 12 months), recent payments, alert list.
+3. **Members** - searchable/filterable table, add/edit modal or page, detail page with tabs (Overview / Subscriptions / Payments / Attendance).
+4. **Plans** - CRUD table.
+5. **Subscriptions** - list with status + expiry badges; new/renew flow with plan picker and payment capture.
+6. **Payments** - list, filter by date range, record payment, receipt print view.
+7. **Attendance** - today's console: quick member search -> check in, list of who's in the gym, check out.
+8. **Trainers** - CRUD, assign members, view assigned roster.
+9. **Reports** - date-range pickers, charts + tables, CSV export.
+10. **Settings / Users** - admin only.
 
 **UI:** Tailwind CSS + shadcn/ui (or MUI) for speed, Recharts for charts, React Hook Form + zod for forms.
 
@@ -169,7 +171,7 @@ client/src/
 ## 6. Expiry alerts
 
 - Nightly cron (node-cron, `0 1 * * *` gym time):
-  1. Mark `subscriptions` with `end_date < today` and status `active` → `expired`.
+  1. Mark `subscriptions` with `end_date < today` and status `active` -> `expired`.
   2. For subscriptions ending in **7, 3, 1** days (configurable in `settings`), insert a
      `notifications` row (deduplicated by `subscription_id + type`).
 - Dashboard shows "Expiring soon" card + alert list; `/subscriptions/expiring` powers the member table filter.
@@ -206,7 +208,7 @@ All reports: date range picker, on-screen table + chart, CSV export (stream gene
 | **7. Reports** | Five reports + CSV export | Numbers match DB queries; export opens correctly in Excel |
 | **8. Hardening & ship** | Validation audit, rate limiting, helmet/CORS, audit log, tests (API integration + key UI flows), seed/demo data, README, deployment (VPS + PM2/nginx or Docker) | Test suite green; deployed behind HTTPS with nightly DB backup |
 
-Rough effort for one developer: **Phases 0–4 ≈ 2 weeks**, **5–7 ≈ 1 week**, **8 ≈ 3–4 days**.
+Rough effort for one developer: **Phases 0-4 ≈ 2 weeks**, **5-7 ≈ 1 week**, **8 ≈ 3-4 days**.
 
 ---
 
@@ -235,4 +237,4 @@ Rough effort for one developer: **Phases 0–4 ≈ 2 weeks**, **5–7 ≈ 1 week
 ## 11. Suggested next step
 
 Start **Phase 0**: scaffold the monorepo, migrations for the schema in §3, seed an admin + sample plans,
-and a working `/health` endpoint — so every later phase has a runnable base.
+and a working `/health` endpoint - so every later phase has a runnable base.

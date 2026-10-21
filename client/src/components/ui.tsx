@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Icon, type IconName } from './Icon';
+import { Icon } from './Icon';
 import { avatarTone, initials } from '../lib/format';
 import type { Tone } from '../lib/status';
 
@@ -50,23 +50,16 @@ export function Badge({ tone = 'muted', children, dot = true }: { tone?: Tone; c
 export function StatCard({
   label,
   value,
-  icon,
-  tone = 'violet',
   foot,
   onClick,
 }: {
   label: string;
   value: ReactNode;
-  icon: IconName;
-  tone?: string;
   foot?: ReactNode;
   onClick?: () => void;
 }) {
   return (
     <div className={`stat-card ${onClick ? 'stat-clickable' : ''}`} onClick={onClick}>
-      <div className={`stat-icon tone-${tone}`}>
-        <Icon name={icon} size={19} />
-      </div>
       <div className="stat-body">
         <div className="stat-label">{label}</div>
         <div className="stat-value">{value}</div>
@@ -89,21 +82,16 @@ export function PageHead({ title, subtitle, actions }: { title: ReactNode; subti
 }
 
 export function EmptyState({
-  icon = 'members',
   title,
   message,
   action,
 }: {
-  icon?: IconName;
   title: string;
   message?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="empty-state">
-      <span className="empty-icon">
-        <Icon name={icon} size={22} />
-      </span>
       <h3>{title}</h3>
       {message && <p>{message}</p>}
       {action}

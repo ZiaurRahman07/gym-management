@@ -64,7 +64,6 @@ export function Payments() {
         subtitle="Track every invoice, print receipts and issue refunds."
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setRecordOpen(true)}>
-            <Icon name="plus" size={16} />
             Record payment
           </button>
         }
@@ -72,16 +71,12 @@ export function Payments() {
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={16} />
           <span>{error}</span>
         </div>
       )}
 
       <div className="stat-grid stat-grid-3">
         <div className="stat-card">
-          <span className="stat-icon tone-success">
-            <Icon name="money" size={19} />
-          </span>
           <div className="stat-body">
             <div className="stat-label">Collected in range</div>
             <div className="stat-value">{money(summary?.paid ?? 0)}</div>
@@ -89,9 +84,6 @@ export function Payments() {
           </div>
         </div>
         <div className="stat-card">
-          <span className="stat-icon tone-rose">
-            <Icon name="refresh" size={19} />
-          </span>
           <div className="stat-body">
             <div className="stat-label">Refunded</div>
             <div className="stat-value">{money(summary?.refunded ?? 0)}</div>
@@ -99,13 +91,10 @@ export function Payments() {
           </div>
         </div>
         <div className="stat-card">
-          <span className="stat-icon tone-blue">
-            <Icon name="calendar" size={19} />
-          </span>
           <div className="stat-body">
             <div className="stat-label">Period</div>
             <div className="stat-value" style={{ fontSize: 18 }}>
-              {formatShortDate(from)} – {formatShortDate(to)}
+              {formatShortDate(from)} to {formatShortDate(to)}
             </div>
             <div className="stat-foot">Change the dates to filter the ledger</div>
           </div>
@@ -204,7 +193,6 @@ export function Payments() {
 
         {!loading && payments.length === 0 && (
           <EmptyState
-            icon="payments"
             title="No payments in this range"
             message="Try widening the dates, or record a new payment."
             action={

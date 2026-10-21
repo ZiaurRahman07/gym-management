@@ -22,29 +22,29 @@ export type ExpiryJobResult = {
  * (subscription_id, type) index so the job is safe to re-run.
  */
 export async function runExpiryJob(): Promise<ExpiryJobResult> {
-  const setting = await queryOne<{ value: string }>('SELECT `value` FROM settings WHERE `key` = ?', [
+  const setting = await queryOne<{ value: string }>('SELECT "value" FROM settings WHERE "key" = ?', [
     'alert_lead_days',
   ]);
   const leadDays = Math.min(60, Math.max(1, Number(setting?.value) || 7));
 
   const expired = await execute(
     `UPDATE subscriptions SET status = 'expired'
-     WHERE status = 'active' AND end_date < CURDATE()`,
+     WHERE status = 'active' AND end_date < CURRENT_DATE`,
   );
 
   const milestones = [...new Set([leadDays, 7, 3, 1].filter((days) => days <= leadDays))].sort((a, b) => b - a);
   const placeholders = milestones.map(() => '?').join(', ');
 
   const expiring = await query<ExpiringRow>(
-    `SELECT s.id AS subscriptionId, s.member_id AS memberId, s.end_date AS endDate,
-            DATEDIFF(s.end_date, CURDATE()) AS daysLeft,
-            m.first_name AS firstName, m.last_name AS lastName
+    `SELECT s.id AS "subscriptionId", s.member_id AS "memberId", s.end_date AS "endDate",
+            (s.end_date - CURRENT_DATE) AS "daysLeft",
+            m.first_name AS "firstName", m.last_name AS "lastName"
      FROM subscriptions s
      JOIN members m ON m.id = s.member_id
      WHERE s.status = 'active'
        AND m.deleted_at IS NULL
        AND m.status = 'active'
-       AND DATEDIFF(s.end_date, CURDATE()) IN (${placeholders})`,
+       AND (s.end_date - CURRENT_DATE) IN (${placeholders})`,
     milestones,
   );
 
@@ -53,8 +53,9 @@ export async function runExpiryJob(): Promise<ExpiryJobResult> {
     const days = Number(row.daysLeft);
     const label = days === 1 ? 'tomorrow' : `in ${days} days`;
     const result = await execute(
-      `INSERT IGNORE INTO notifications (member_id, subscription_id, type, title, body)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO notifications (member_id, subscription_id, type, title, body)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (subscription_id, type) DO NOTHING`,
       [
         row.memberId,
         row.subscriptionId,

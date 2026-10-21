@@ -1,6 +1,6 @@
 import type { MembershipStatus } from '../api/types';
 
-export type Tone = 'success' | 'warning' | 'danger' | 'info' | 'muted' | 'violet';
+export type Tone = 'success' | 'warning' | 'danger' | 'info' | 'muted';
 
 type StatusMeta = { label: string; tone: Tone };
 
@@ -25,7 +25,7 @@ export const SUBSCRIPTION_STATUS: Record<string, StatusMeta> = {
 export const PAYMENT_STATUS: Record<string, StatusMeta> = {
   paid: { label: 'Paid', tone: 'success' },
   pending: { label: 'Pending', tone: 'warning' },
-  refunded: { label: 'Refunded', tone: 'violet' },
+  refunded: { label: 'Refunded', tone: 'info' },
   failed: { label: 'Failed', tone: 'danger' },
 };
 
@@ -53,10 +53,9 @@ export function statusMeta(map: Record<string, StatusMeta>, key: string | null |
 }
 
 export const TONE_COLORS: Record<Tone, string> = {
-  success: '#12b76a',
-  warning: '#f79009',
-  danger: '#e5484d',
-  info: '#3b82f6',
-  muted: '#98a2b3',
-  violet: '#8b5cf6',
+  success: '#2e7d5b',
+  warning: '#a96a12',
+  danger: '#a6403a',
+  info: '#2f6288',
+  muted: '#8c948f',
 };

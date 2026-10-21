@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/endpoints';
 import type { Member } from '../api/types';
-import { Icon } from '../components/Icon';
 import { MemberFormModal } from '../components/MemberFormModal';
 import { Avatar, Badge, EmptyState, PageHead, Pagination, SearchInput } from '../components/ui';
 import { useToast } from '../context/ToastContext';
@@ -71,7 +70,6 @@ export function Members() {
         subtitle="Search the roster, start memberships and keep contact details current."
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setOpenNew(true)}>
-            <Icon name="plus" size={16} />
             Add member
           </button>
         }
@@ -79,7 +77,6 @@ export function Members() {
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={16} />
           <span>{error}</span>
         </div>
       )}
@@ -97,7 +94,7 @@ export function Members() {
             </select>
             <select className="filter-select" value={sort} onChange={(event) => setSort(event.target.value)}>
               <option value="recent">Newest first</option>
-              <option value="name">Name A–Z</option>
+              <option value="name">Name A-Z</option>
               <option value="expiry">Expiry soonest</option>
               <option value="oldest">Oldest members</option>
             </select>
@@ -149,7 +146,7 @@ export function Members() {
                           {member.phone}
                           <span className="cell-sub">{member.email ?? 'No email'}</span>
                         </td>
-                        <td>{member.planName ?? <span className="muted">—</span>}</td>
+                        <td>{member.planName ?? <span className="muted">No plan</span>}</td>
                         <td>
                           {member.subscriptionEnd ? (
                             <>
@@ -161,14 +158,14 @@ export function Members() {
                               </span>
                             </>
                           ) : (
-                            <span className="muted">—</span>
+                            <span className="muted">No expiry</span>
                           )}
                         </td>
                         <td>
                           <Badge tone={displayMeta.tone}>{displayMeta.label}</Badge>
                         </td>
                         <td className="text-right">
-                          <Icon name="chevronRight" size={16} />
+                          <span className="row-arrow">View</span>
                         </td>
                       </tr>
                     );
@@ -179,12 +176,10 @@ export function Members() {
 
         {!loading && members.length === 0 && (
           <EmptyState
-            icon="members"
             title="No members found"
             message={q ? `Nothing matches “${q}”. Try a different search.` : 'Register the first member to get started.'}
             action={
               <button type="button" className="btn btn-primary btn-sm" onClick={() => setOpenNew(true)}>
-                <Icon name="plus" size={15} />
                 Add member
               </button>
             }

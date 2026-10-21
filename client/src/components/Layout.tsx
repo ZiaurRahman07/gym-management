@@ -133,9 +133,6 @@ export function Layout() {
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
         <div className="brand">
-          <span className="brand-mark">
-            <Icon name="dumbbell" size={21} />
-          </span>
           <div>
             <div className="brand-name">{settings.gymName}</div>
             <div className="brand-sub">Gym management</div>
@@ -156,9 +153,6 @@ export function Layout() {
                     end={item.end}
                     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                   >
-                    <span className="nav-icon">
-                      <Icon name={item.icon} size={18} />
-                    </span>
                     {item.label}
                   </NavLink>
                 ))}
@@ -200,7 +194,7 @@ export function Layout() {
                 type="button"
                 className="icon-btn bell"
                 onClick={() => setMenu(menu === 'bell' ? null : 'bell')}
-                aria-label="Notifications"
+                aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
               >
                 <Icon name="bell" size={19} />
                 {unread > 0 && <span className="icon-badge">{unread > 9 ? '9+' : unread}</span>}
@@ -257,17 +251,14 @@ export function Layout() {
                   </div>
                   {user?.role === 'admin' && (
                     <button type="button" className="menu-item" onClick={() => navigate('/settings')}>
-                      <Icon name="settings" size={16} />
                       Settings
                     </button>
                   )}
                   <button type="button" className="menu-item" onClick={() => navigate('/settings')}>
-                    <Icon name="lock" size={16} />
                     Change password
                   </button>
                   <div className="menu-sep" />
                   <button type="button" className="menu-item danger" onClick={handleLogout}>
-                    <Icon name="logout" size={16} />
                     Sign out
                   </button>
                 </div>

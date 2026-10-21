@@ -1,31 +1,31 @@
-# Iron Pulse — Gym Management System
+# Iron Pulse: Gym Management System
 
-A complete, working gym management app: members, membership plans, subscriptions, payments,
-trainers, attendance, expiry alerts, dashboards and reports.
+A complete gym management app: members, membership plans, subscriptions, payments, trainers,
+attendance, expiry alerts, dashboards and reports.
 
-**Stack:** React 18 + Vite + TypeScript · Node.js + Express + TypeScript · MySQL 8 (MariaDB compatible)
+**Stack:** React 18 + Vite + TypeScript · Node.js + Express + TypeScript · PostgreSQL 15+ (Supabase compatible)
 
 ---
 
 ## Features
 
-- **Admin dashboard** — active members, revenue this month, check-ins today, renewals due, a 12-month
+- **Admin dashboard**: active members, revenue this month, check-ins today, renewals due, a 12-month
   revenue trend, membership mix and recent activity.
-- **Member registration** — contact details, notes, status, and an optional membership sale with
+- **Member registration**: contact details, notes, status, and an optional membership sale with
   discount and payment capture in the same transaction. Automatic `GYM-0001` member codes.
-- **Plans** — day passes through annual plans, with active/archived state and "sold" counts.
-- **Memberships** — sell, renew (new term starts after the current one ends), freeze (extends the end
-  date on resume) and cancel. Prevent overlapping memberships per member.
-- **Payments** — invoice numbers, cash/card/bank/online, printable receipts, refunds (admin only),
+- **Plans**: day passes through annual plans, with active/archived state and sold counts.
+- **Memberships**: sell, renew (new term starts after the current one ends), freeze (extends the end
+  date on resume) and cancel. The database prevents overlapping active memberships per member.
+- **Payments**: invoice numbers, cash/card/bank/online, printable receipts, refunds (admin only),
   date/method filters and a collected/refunded summary.
-- **Attendance** — quick search check-in, a live "in the gym" list, check-out, duration and history.
+- **Attendance**: quick search check-in, a live "in the gym" list, check-out, duration and history.
   Expired memberships are rejected unless the gym explicitly allows them.
-- **Trainers** — profiles, specializations, member rosters, assign/unassign, deactivate.
-- **Expiry alerts** — nightly sweep marks lapsed memberships expired and raises in-app notifications
-  inside the configurable alert window (default 7 days, plus 3-day and 1-day milestones).
-- **Reports** — revenue (by day/month/plan/method), membership growth and churn, attendance (daily,
-  unique members, peak hours), trainer activity. Every report exports as CSV.
-- **Roles & security** — admin / receptionist / trainer, JWT access + refresh tokens, bcrypt hashes,
+- **Trainers**: profiles, specializations, member rosters, assign/unassign, deactivate.
+- **Expiry alerts**: nightly sweep marks lapsed memberships expired and raises in-app notifications
+  inside the configurable alert window.
+- **Reports**: revenue (by day/month/plan/method), membership growth and churn, attendance and
+  trainer activity. Every report exports as CSV.
+- **Roles and security**: admin / receptionist / trainer, JWT access + refresh tokens, bcrypt hashes,
   zod validation, rate-limited login, Helmet, parameterized SQL and an audit log.
 
 ---
@@ -34,68 +34,57 @@ trainers, attendance, expiry alerts, dashboards and reports.
 
 ### 1. Prerequisites
 
-- Node.js **20+** (built and tested on 24)
-- MySQL **8.x** or MariaDB **10.6+** (built and tested on MariaDB 13)
+- Node.js **20+**
+- PostgreSQL **15+** (local, Docker, or Supabase)
 
 ### 2. Database
 
-Either use Docker:
+With Docker:
 
 ```bash
 docker compose up -d
 ```
 
-…or a local MySQL/MariaDB. Create the schema and app user:
-
-```sql
-CREATE DATABASE gym_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'gym'@'localhost' IDENTIFIED BY 'gym_pass';
-CREATE USER 'gym'@'127.0.0.1' IDENTIFIED BY 'gym_pass';
-GRANT ALL PRIVILEGES ON gym_db.* TO 'gym'@'localhost';
-GRANT ALL PRIVILEGES ON gym_db.* TO 'gym'@'127.0.0.1';
-FLUSH PRIVILEGES;
-```
-
-### 3. Install and configure
+Or use any PostgreSQL server and create a database. Then apply the schema:
 
 ```bash
+cp server/.env.example server/.env     # Windows: copy server\.env.example server\.env
+# edit server/.env: set DATABASE_URL or DB_* and the two JWT secrets
 npm install
-cp server/.env.example server/.env      # Windows: copy server\.env.example server\.env
-```
-
-Edit `server/.env` and set the two JWT secrets. Generate them with:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
-### 4. Migrate and seed
-
-```bash
 npm run db:migrate
+```
+
+`npm run db:migrate` reads `supabase/schema.sql`. It is idempotent.
+
+Optional demo data (10 members, 3 staff, plans, payments, attendance):
+
+```bash
 npm run db:seed
 ```
 
-The seed is safe to re-run: it only creates the admin, plans and demo data when they are missing.
+### 3. Create a staff login
 
-### 5. Run
+Supabase Auth users are separate. Create an app account with either:
+
+```bash
+npm run db:user -- "Alex Morgan" admin@example.com "StrongPass123!" admin
+```
+
+or run `supabase/create-user.sql` in the Supabase SQL editor. Roles: `admin`, `receptionist`,
+`trainer`.
+
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-> **Windows tip:** run these commands **from the project folder**. In PowerShell the prompt should show
-> `PS D:\Gym management system>`. An admin PowerShell opens in `C:\WINDOWS\system32`, where npm will
-> fail with `Could not read package.json`. Or just double-click **`start.bat`** in the project folder,
-> which starts the database and the app for you.
-
 - App: <http://localhost:5173>
-- API: <http://localhost:4000> (health check at `/api/health`)
+- API: <http://localhost:4000> (health: `/api/health`)
 
-On Windows you can start/stop the project-local MariaDB with `npm run db:start` and `npm run db:stop`
-(see the note at the bottom).
+> **Windows tip:** run commands from the project folder (`PS D:\Gym management system>`).
 
-### Demo accounts
+### Demo accounts (only after `npm run db:seed`)
 
 | Role | Email | Password |
 |---|---|---|
@@ -103,8 +92,7 @@ On Windows you can start/stop the project-local MariaDB with `npm run db:start` 
 | Receptionist | `frontdesk@gym.local` | `Frontdesk@123` |
 | Trainer | `trainer@gym.local` | `Trainer@123` |
 
-The seed creates 24 members, 5 plans, 4 trainers, roughly 40 memberships and payments, and attendance
-history. **Change these credentials before deploying.**
+**Change or delete these before deploying.**
 
 ---
 
@@ -116,30 +104,39 @@ history. **Change these credentials before deploying.**
 | `npm run dev:server` / `npm run dev:client` | Run one side only |
 | `npm run build` | Type-check and build API + client |
 | `npm start` | Run the built API (serves the client when `NODE_ENV=production`) |
-| `npm run db:migrate` | Apply pending migrations |
-| `npm run db:seed` | Seed demo data and accounts |
-| `npm run db:start` / `npm run db:stop` | Windows helper for the local MariaDB instance |
+| `npm run db:migrate` | Apply `supabase/schema.sql` |
+| `npm run db:seed` | Seed demo data from `supabase/seed.sql` |
+| `npm run db:user -- "Name" email password role` | Create or reset a staff login |
+| `npm run db:start` / `npm run db:stop` | Docker PostgreSQL helper |
+| `scripts/smoke.ps1` | End-to-end API smoke test (mutates a test database) |
 
 ---
 
 ## Configuration
 
-All settings live in `server/.env` (see `server/.env.example`):
+All settings live in `server/.env` (see `server/.env.example`). Render/Supabase values are documented
+in [`SUPABASE.md`](SUPABASE.md).
 
 | Variable | Default | Notes |
 |---|---|---|
 | `NODE_ENV` | `development` | `production` enables secure cookies and serves the built client |
 | `PORT` | `4000` | API port |
-| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `3306` | MySQL connection |
-| `DB_USER` / `DB_PASSWORD` | — | App user credentials |
-| `DB_NAME` | `gym_db` | Schema name |
-| `JWT_ACCESS_SECRET` | — | At least 24 characters |
-| `JWT_REFRESH_SECRET` | — | At least 24 characters |
+| `DATABASE_URL` | none | Postgres connection string; preferred |
+| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `5432` | Fallback when `DATABASE_URL` is unset |
+| `DB_USER` / `DB_PASSWORD` / `DB_NAME` | `postgres` / empty / `postgres` | Fallback connection values |
+| `DB_SSL` | `false` | Set `true` for Supabase or any TLS database |
+| `DB_POOL_MAX` | `10` | Connection pool size |
+| `JWT_ACCESS_SECRET` | required | At least 24 characters |
+| `JWT_REFRESH_SECRET` | required | At least 24 characters |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | CORS allow-list (comma-separated) |
-| `GYM_TIMEZONE` | `UTC` | Default display timezone |
+| `GYM_TIMEZONE` | `UTC` | Database session timezone, cron timezone and report grouping |
+| `COOKIE_SAMESITE` | `lax` | Use `none` only for a cross-site UI over HTTPS |
 
-Gym name, currency, timezone, alert window and the expired-check-in rule are editable in
-**Settings** (admin) and stored in the `settings` table.
+Gym name, currency, timezone, alert window and the expired-check-in rule are editable in **Settings**
+(admin) and stored in the `settings` table.
+
+Supabase's `SUPABASE_URL` and anon key are **not** read by this API. Only the Postgres connection
+string is needed.
 
 ---
 
@@ -160,7 +157,7 @@ Gym name, currency, timezone, alert window and the expired-check-in rule are edi
 ├── server/
 │   ├── src/
 │   │   ├── config/          validated environment
-│   │   ├── db/              pool, SQL migrations, seed
+│   │   ├── db/              pg pool, migrate/seed wrappers, create-user CLI
 │   │   ├── jobs/            nightly expiry sweep
 │   │   ├── lib/             errors, helpers, JWT, audit
 │   │   ├── middleware/      auth/RBAC, error handling
@@ -169,15 +166,15 @@ Gym name, currency, timezone, alert window and the expired-check-in rule are edi
 │   │   ├── app.ts           express app
 │   │   └── server.ts        startup, cron, graceful shutdown
 │   └── .env.example
-├── scripts/                 Windows local-database helpers
-├── supabase/                PostgreSQL schema, seed and pg_cron job for Supabase
-├── docker-compose.yml       MySQL 8.4 service
-├── PLAN.md                  original plan and delivery phases
+├── supabase/                PostgreSQL schema, seed, create-user, cleanup and pg_cron
+├── scripts/                 smoke test and local helpers
+├── docker-compose.yml       PostgreSQL 17 service
+├── SUPABASE.md              Supabase + Render deployment and troubleshooting
 └── README.md
 ```
 
-No ORM: queries are parameterized SQL through `mysql2`, with a small migration runner
-(`server/src/db/migrations.ts`) and transactions around money-changing operations.
+No ORM: queries are parameterized SQL through `pg`, with transactions around money-changing
+operations.
 
 ---
 
@@ -191,7 +188,7 @@ No ORM: queries are parameterized SQL through `mysql2`, with a small migration r
 | `subscriptions` | A member's membership term and status |
 | `payments` | Invoices, amounts, method and status |
 | `trainers` | Trainer profiles |
-| `trainer_assignments` | Trainer ↔ member assignments with history |
+| `trainer_assignments` | Trainer to member assignments with history |
 | `attendance` | Check-in / check-out records |
 | `notifications` | In-app expiry alerts |
 | `audit_log` | Who changed what |
@@ -200,13 +197,12 @@ No ORM: queries are parameterized SQL through `mysql2`, with a small migration r
 ### Membership rules
 
 1. A member can only have **one active/upcoming membership at a time**.
-2. **Renewing** creates a new row starting the day after the current membership ends; it never
-   edits the old term. Paying for a renewal in advance is supported.
+2. **Renewing** creates a new row starting the day after the current membership ends.
 3. **Freezing** pauses access; **resuming** extends the end date by the number of frozen days.
-4. `final_amount = price_at_purchase − discount`; discounts cannot exceed the plan price.
+4. `final_amount = price_at_purchase - discount`; discounts cannot exceed the plan price.
 5. A new membership and its payment are written in **one transaction**.
 6. Check-in requires an active membership and no open visit; expired members are blocked unless
-   *Allow check-in with expired membership* is enabled in Settings.
+   *Allow check-in with expired membership* is enabled.
 7. Archiving a member cancels active memberships, ends trainer assignments and keeps history.
 
 ---
@@ -219,7 +215,7 @@ All routes are under `/api` and require a bearer token except `/auth/login`, `/a
 ```
 POST   /auth/login | /auth/refresh | /auth/logout    GET /auth/me
 GET    /dashboard/stats
-CRUD   /members, /members/:id (detail includes subscriptions, payments, attendance, trainers)
+CRUD   /members, /members/:id
 GET    /plans | POST /plans | PATCH/DELETE /plans/:id
 GET    /subscriptions | POST /subscriptions | PATCH /subscriptions/:id  {action: freeze|unfreeze|cancel}
 GET    /subscriptions/expiring?days=7
@@ -240,22 +236,38 @@ List endpoints return `{ data, page, limit, total, totalPages }`; errors return
 
 | Area | Admin | Receptionist | Trainer |
 |---|---|---|---|
-| Dashboard, members (read), attendance | ✓ | ✓ | ✓ |
-| Create/edit members, memberships, payments | ✓ | ✓ | — |
-| Refunds, plans, users, settings | ✓ | — | — |
-| Trainer rosters | ✓ | ✓ | read |
-| Reports | ✓ | ✓ | — |
+| Dashboard, members (read), attendance | yes | yes | yes |
+| Create/edit members, memberships, payments | yes | yes | no |
+| Refunds, plans, users, settings | yes | no | no |
+| Trainer rosters | yes | yes | read |
+| Reports | yes | yes | no |
+
+---
+
+## Interface principles
+
+The UI is deliberately plain and document-like:
+
+- **Palette:** warm paper (`#f7f5f0`), white surfaces, deep evergreen primary (`#145c4a`), copper
+  accent (`#a86537`). Solid colours only, no purple-blue gradients.
+- **Type:** one system sans stack (`Segoe UI`, `-apple-system`, `Helvetica Neue`, Arial). No Inter,
+  no Space Grotesk, no serif italics.
+- **Surfaces:** flat cards with one neutral border and one soft shadow. No glassmorphism or
+  translucent blur.
+- **Layout:** 4/8/12/16/20/24/32/40 px spacing scale, one card radius, one control radius.
+- **Content:** text-first navigation and stat cards; icons only where they carry an action.
+  No emoji headings, no badge above the title, no marketing copy, no em dashes.
+- **Motion:** no scroll-triggered fades or cursor effects. Only a spinner and a skeleton pulse.
 
 ---
 
 ## Expiry alerts
 
-- On start-up and every night at **00:05**, the job marks memberships with `end_date < today` as
-  `expired` and creates notifications for memberships inside the alert window.
+- On startup and every night at **00:05** in `GYM_TIMEZONE`, the job marks memberships with
+  `end_date < today` as `expired` and creates notifications for memberships inside the alert window.
 - Alert milestones: the configured lead day (default 7) plus 7/3/1 days, deduplicated per
   subscription by a unique index, so re-runs are safe.
-- Notifications appear in the topbar bell and on the dashboard. The dashboard's "expiring" count and
-  list use the same configured window.
+- Notifications appear in the topbar bell and on the dashboard.
 
 ---
 
@@ -267,54 +279,31 @@ NODE_ENV=production PORT=4000 npm start
 ```
 
 In production the Express server serves the built SPA from `client/dist` and handles SPA routing, so
-one process (behind nginx/Caddy for TLS) is enough.
+one process behind HTTPS is enough. See [`SUPABASE.md`](SUPABASE.md) for the Render + Supabase
+checklist.
 
 Checklist:
 
-- Set strong `JWT_*` secrets and change the seeded passwords.
+- Set strong `JWT_*` secrets and remove the demo accounts.
 - Set `CLIENT_ORIGIN` to your real domain(s).
-- Put MySQL on a private network and take nightly `mysqldump` backups.
-- Use HTTPS — refresh cookies are `secure` in production.
+- Use `DATABASE_URL` with SSL; never ship the service key or DB password to the client.
+- Use HTTPS. Refresh cookies are `secure` in production.
 - Run migrations as part of your deploy (`npm run db:migrate`).
-- Don't run `db:seed` in production.
+- Do not run `db:seed` in production.
+- Take regular database backups (Supabase has daily backups on paid plans).
 
 ---
 
-## Supabase / PostgreSQL
-
-The app ships with a MySQL backend. A tested PostgreSQL version of the schema lives in
-`supabase/` (`schema.sql`, `seed.sql`, `cron.sql`) with a full porting guide in
-[`SUPABASE.md`](SUPABASE.md).
-
-Running on Supabase requires switching the API from `mysql2` to `pg` — the SQL alone is not enough,
-because the current code uses MySQL-only syntax and unquoted camelCase aliases. See `SUPABASE.md`
-§4 for the exact list of changes.
-
----
-
-## Notes, limits and next steps
+## Notes and limits
 
 - Payments are recorded manually; there is no gateway integration.
-- Alerts are in-app only — no email/SMS/WhatsApp provider is wired up.
+- Alerts are in-app only; no email/SMS/WhatsApp provider is wired up.
 - Member photos are URLs, not file uploads.
-- Single location; the plan anticipates `branch_id` but it is not implemented.
-- Times are stored in the database server's local time; `GYM_TIMEZONE` is for display/config only.
-- No automated test suite is included; the API was smoke-tested end-to-end (registration, renewal,
-  freeze/unfreeze, payments, refunds, attendance guards, RBAC, reports, CSV export).
+- Single location; `branch_id` is not implemented.
+- No automated test suite is checked in. The API and UI were smoke-tested end to end (login,
+  registration, renewal, freeze/unfreeze, payments, refunds, attendance guards, RBAC, reports, CSV,
+  and page rendering).
 - Audit entries are written but have no UI yet.
 
 Sensible next steps: email/SMS alerts, a payment gateway, QR check-in, multi-branch support, class
 scheduling, and an automated integration test suite.
-
----
-
-## Local setup on this machine (Windows)
-
-This workspace was built and seeded against a **project-local MariaDB 13** instance:
-
-- Binaries: `C:\Program Files\MariaDB 13.0\bin`
-- Data directory: `.tools/mariadb-data` (git-ignored)
-- Listens on `127.0.0.1:3306`, `root` with no password; the app uses `gym` / `gym_pass`
-- Start it with `npm run db:start`, stop it with `npm run db:stop`
-
-If you prefer your own MySQL server, point `server/.env` at it and ignore these helpers.

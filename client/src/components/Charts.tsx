@@ -1,5 +1,3 @@
-import { useId } from 'react';
-
 type Point = { label: string; value: number };
 
 function niceMax(value: number): number {
@@ -30,7 +28,6 @@ export function AreaChart({
   formatValue?: (value: number) => string;
   formatLabel?: (label: string) => string;
 }) {
-  const gradientId = useId().replace(/:/g, '');
   if (data.length === 0) return <div className="chart-empty">No data for this period.</div>;
 
   const width = 760;
@@ -56,13 +53,7 @@ export function AreaChart({
 
   return (
     <div className="chart">
-      <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img">
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.01" />
-          </linearGradient>
-        </defs>
+      <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img" aria-label="Revenue trend chart">
         {gridLines.map((ratio) => {
           const y = padding.top + plotHeight * ratio;
           const value = max * (1 - ratio);
@@ -75,7 +66,7 @@ export function AreaChart({
             </g>
           );
         })}
-        <path d={area} fill={`url(#${gradientId})`} />
+        <path d={area} className="chart-area" />
         <path d={line} className="chart-line" />
         {coords.map((point, index) =>
           data.length <= 16 ? (
@@ -108,7 +99,7 @@ export function BarChart({
   height = 220,
   formatValue = (value) => value.toLocaleString(),
   formatLabel = (label) => label,
-  color = '#6366f1',
+  color = '#145c4a',
 }: {
   data: Point[];
   height?: number;
@@ -129,7 +120,7 @@ export function BarChart({
 
   return (
     <div className="chart">
-      <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img">
+      <svg viewBox={`0 0 ${width} ${height}`} className="chart-svg" role="img" aria-label="Bar chart">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const y = padding.top + plotHeight * ratio;
           return (
@@ -188,7 +179,7 @@ export function Donut({
     const end = total === 0 ? 0 : (cursor / total) * 360;
     return `${segment.color} ${start}deg ${end}deg`;
   });
-  const background = total === 0 ? '#eef0f5' : `conic-gradient(${stops.join(', ')})`;
+  const background = total === 0 ? 'var(--surface-3)' : `conic-gradient(${stops.join(', ')})`;
 
   return (
     <div className="donut-wrap">

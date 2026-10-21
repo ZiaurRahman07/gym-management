@@ -21,11 +21,11 @@ router.get(
   asyncHandler(async (req, res) => {
     const includeInactive = req.query.includeInactive === 'true';
     const rows = await query(
-      `SELECT p.id, p.name, p.duration_days AS durationDays, p.price, p.description,
-              p.is_active AS isActive, p.created_at AS createdAt,
-              (SELECT COUNT(*) FROM subscriptions s WHERE s.plan_id = p.id) AS subscriptionCount
+      `SELECT p.id, p.name, p.duration_days AS "durationDays", p.price, p.description,
+              p.is_active AS "isActive", p.created_at AS "createdAt",
+              (SELECT COUNT(*) FROM subscriptions s WHERE s.plan_id = p.id) AS "subscriptionCount"
        FROM plans p
-       ${includeInactive ? '' : 'WHERE p.is_active = 1'}
+       ${includeInactive ? '' : 'WHERE p.is_active = true'}
        ORDER BY p.duration_days ASC, p.price ASC`,
     );
     res.json({ data: rows });
@@ -42,12 +42,12 @@ router.post(
 
     const result = await execute(
       'INSERT INTO plans (name, duration_days, price, description, is_active) VALUES (?, ?, ?, ?, ?)',
-      [body.name, body.durationDays, body.price, body.description ?? null, body.isActive === false ? 0 : 1],
+      [body.name, body.durationDays, body.price, body.description ?? null, body.isActive === false ? false : true],
     );
     await logAudit(req.user?.id, 'plan.create', 'plan', result.insertId, body);
 
     const plan = await queryOne(
-      `SELECT id, name, duration_days AS durationDays, price, description, is_active AS isActive
+      `SELECT id, name, duration_days AS "durationDays", price, description, is_active AS "isActive"
        FROM plans WHERE id = ?`,
       [result.insertId],
     );
@@ -83,7 +83,7 @@ router.patch(
       if (key in body) {
         sets.push(`${column} = ?`);
         const value = (body as Record<string, unknown>)[key];
-        values.push(key === 'isActive' ? (value ? 1 : 0) : (value ?? null));
+        values.push(key === 'isActive' ? Boolean(value) : (value ?? null));
       }
     }
 
@@ -94,7 +94,7 @@ router.patch(
     }
 
     const plan = await queryOne(
-      `SELECT id, name, duration_days AS durationDays, price, description, is_active AS isActive
+      `SELECT id, name, duration_days AS "durationDays", price, description, is_active AS "isActive"
        FROM plans WHERE id = ?`,
       [id],
     );
@@ -112,7 +112,7 @@ router.delete(
 
     const used = await queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM subscriptions WHERE plan_id = ?', [id]);
     if (Number(used?.count) > 0) {
-      await execute('UPDATE plans SET is_active = 0 WHERE id = ?', [id]);
+      await execute('UPDATE plans SET is_active = false WHERE id = ?', [id]);
       await logAudit(req.user?.id, 'plan.deactivate', 'plan', id);
       res.json({ ok: true, deactivated: true, message: 'This plan has subscriptions, so it was deactivated instead of deleted.' });
       return;

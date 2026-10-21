@@ -18,7 +18,7 @@ const baseSchema = z.object({
 
 async function activeAdminCount(): Promise<number> {
   const row = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM users WHERE role = 'admin' AND is_active = 1`,
+    `SELECT COUNT(*) AS count FROM users WHERE role = 'admin' AND is_active = true`,
   );
   return Number(row?.count ?? 0);
 }
@@ -28,7 +28,7 @@ router.get(
   requireRole('admin'),
   asyncHandler(async (_req, res) => {
     const rows = await query(
-      `SELECT id, name, email, role, is_active AS isActive, created_at AS createdAt FROM users ORDER BY name`,
+      `SELECT id, name, email, role, is_active AS "isActive", created_at AS "createdAt" FROM users ORDER BY name`,
     );
     res.json({ data: rows });
   }),
@@ -42,7 +42,7 @@ router.post(
     const existing = await queryOne('SELECT id FROM users WHERE email = ?', [body.email]);
     if (existing) throw conflict('A user with that email already exists.');
 
-    const hash = await bcrypt.hash(body.password, 10);
+    const hash = await bcrypt.hash(body.password, 12);
     const result = await execute('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', [
       body.name,
       body.email,
@@ -52,7 +52,7 @@ router.post(
     await logAudit(req.user?.id, 'user.create', 'user', result.insertId, { email: body.email, role: body.role });
 
     const user = await queryOne(
-      'SELECT id, name, email, role, is_active AS isActive, created_at AS createdAt FROM users WHERE id = ?',
+      'SELECT id, name, email, role, is_active AS "isActive", created_at AS "createdAt" FROM users WHERE id = ?',
       [result.insertId],
     );
     res.status(201).json({ data: user });
@@ -109,11 +109,11 @@ router.patch(
     }
     if (body.isActive !== undefined) {
       sets.push('is_active = ?');
-      values.push(body.isActive ? 1 : 0);
+      values.push(body.isActive);
     }
     if (body.password) {
       sets.push('password_hash = ?');
-      values.push(await bcrypt.hash(body.password, 10));
+      values.push(await bcrypt.hash(body.password, 12));
     }
 
     if (sets.length) {
@@ -123,7 +123,7 @@ router.patch(
     }
 
     const updated = await queryOne(
-      'SELECT id, name, email, role, is_active AS isActive, created_at AS createdAt FROM users WHERE id = ?',
+      'SELECT id, name, email, role, is_active AS "isActive", created_at AS "createdAt" FROM users WHERE id = ?',
       [id],
     );
     res.json({ data: updated });
@@ -137,13 +137,13 @@ router.delete(
     const id = parseId(req.params.id);
     if (id === req.user?.id) throw badRequest('You cannot deactivate your own account.');
 
-    const user = await queryOne<{ role: string; is_active: number }>('SELECT role, is_active FROM users WHERE id = ?', [id]);
+    const user = await queryOne<{ role: string; is_active: boolean }>('SELECT role, is_active FROM users WHERE id = ?', [id]);
     if (!user) throw notFound('User not found.');
     if (user.role === 'admin' && user.is_active && (await activeAdminCount()) <= 1) {
       throw badRequest('At least one active administrator is required.');
     }
 
-    await execute('UPDATE users SET is_active = 0 WHERE id = ?', [id]);
+    await execute('UPDATE users SET is_active = false WHERE id = ?', [id]);
     await logAudit(req.user?.id, 'user.deactivate', 'user', id);
     res.json({ ok: true });
   }),

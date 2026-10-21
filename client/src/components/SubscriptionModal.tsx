@@ -185,7 +185,7 @@ export function SubscriptionModal({
                 className="input"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                placeholder="Optional — e.g. student discount"
+                placeholder="Optional - e.g. student discount"
               />
             </Field>
           </div>

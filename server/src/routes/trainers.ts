@@ -24,10 +24,10 @@ router.get(
   asyncHandler(async (req, res) => {
     const includeInactive = req.query.includeInactive === 'true';
     const rows = await query(
-      `SELECT t.id, t.user_id AS userId, t.name, t.email, t.phone, t.specialization,
-              t.hire_date AS hireDate, t.status, t.notes,
-              (SELECT COUNT(*) FROM trainer_assignments a WHERE a.trainer_id = t.id AND a.ended_at IS NULL) AS assignedMembers,
-              (SELECT COUNT(*) FROM trainer_assignments a WHERE a.trainer_id = t.id) AS totalAssignments
+      `SELECT t.id, t.user_id AS "userId", t.name, t.email, t.phone, t.specialization,
+              t.hire_date AS "hireDate", t.status, t.notes,
+              (SELECT COUNT(*) FROM trainer_assignments a WHERE a.trainer_id = t.id AND a.ended_at IS NULL) AS "assignedMembers",
+              (SELECT COUNT(*) FROM trainer_assignments a WHERE a.trainer_id = t.id) AS "totalAssignments"
        FROM trainers t
        ${includeInactive ? '' : `WHERE t.status = 'active'`}
        ORDER BY t.status ASC, t.name ASC`,
@@ -44,13 +44,13 @@ router.get(
     if (!trainer) throw notFound('Trainer not found.');
 
     const rows = await query(
-      `SELECT a.id AS assignmentId, a.assigned_at AS assignedAt, a.notes,
-              m.id, m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName,
-              m.phone, m.photo_url AS photoUrl, m.status,
-              s.end_date AS membershipEnds,
+      `SELECT a.id AS "assignmentId", a.assigned_at AS "assignedAt", a.notes,
+              m.id, m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName",
+              m.phone, m.photo_url AS "photoUrl", m.status,
+              s.end_date AS "membershipEnds",
               CASE WHEN s.end_date IS NULL THEN 'none'
-                   WHEN s.end_date < CURDATE() THEN 'expired'
-                   ELSE 'active' END AS membershipStatus
+                   WHEN s.end_date < CURRENT_DATE THEN 'expired'
+                   ELSE 'active' END AS "membershipStatus"
        FROM trainer_assignments a
        JOIN members m ON m.id = a.member_id
        LEFT JOIN subscriptions s ON s.id = (
@@ -87,7 +87,7 @@ router.post(
     await logAudit(req.user?.id, 'trainer.create', 'trainer', result.insertId, body);
 
     const trainer = await queryOne(
-      `SELECT id, user_id AS userId, name, email, phone, specialization, hire_date AS hireDate, status, notes
+      `SELECT id, user_id AS "userId", name, email, phone, specialization, hire_date AS "hireDate", status, notes
        FROM trainers WHERE id = ?`,
       [result.insertId],
     );
@@ -131,7 +131,7 @@ router.patch(
     }
 
     const trainer = await queryOne(
-      `SELECT id, user_id AS userId, name, email, phone, specialization, hire_date AS hireDate, status, notes
+      `SELECT id, user_id AS "userId", name, email, phone, specialization, hire_date AS "hireDate", status, notes
        FROM trainers WHERE id = ?`,
       [id],
     );
@@ -148,7 +148,7 @@ router.delete(
     if (!trainer) throw notFound('Trainer not found.');
 
     await execute(`UPDATE trainers SET status = 'inactive' WHERE id = ?`, [id]);
-    await execute('UPDATE trainer_assignments SET ended_at = CURDATE() WHERE trainer_id = ? AND ended_at IS NULL', [id]);
+    await execute('UPDATE trainer_assignments SET ended_at = CURRENT_DATE WHERE trainer_id = ? AND ended_at IS NULL', [id]);
     await logAudit(req.user?.id, 'trainer.deactivate', 'trainer', id);
     res.json({ ok: true });
   }),
@@ -177,7 +177,7 @@ router.post(
     if (existing) throw conflict('This member is already assigned to that trainer.');
 
     const result = await execute(
-      'INSERT INTO trainer_assignments (trainer_id, member_id, assigned_at) VALUES (?, ?, CURDATE())',
+      'INSERT INTO trainer_assignments (trainer_id, member_id, assigned_at) VALUES (?, ?, CURRENT_DATE)',
       [trainerId, body.memberId],
     );
     await logAudit(req.user?.id, 'trainer.assign', 'trainer_assignment', result.insertId, {
@@ -196,7 +196,7 @@ router.delete(
     const memberId = parseId(req.params.memberId);
 
     const result = await execute(
-      'UPDATE trainer_assignments SET ended_at = CURDATE() WHERE trainer_id = ? AND member_id = ? AND ended_at IS NULL',
+      'UPDATE trainer_assignments SET ended_at = CURRENT_DATE WHERE trainer_id = ? AND member_id = ? AND ended_at IS NULL',
       [trainerId, memberId],
     );
     if (!result.affectedRows) throw notFound('Active assignment not found.');

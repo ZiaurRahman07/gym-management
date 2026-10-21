@@ -15,15 +15,15 @@ import {
 const router = Router();
 
 const SUB_SELECT = `
-  s.id, s.member_id AS memberId, s.plan_id AS planId,
-  s.start_date AS startDate, s.end_date AS endDate, s.status,
-  s.price_at_purchase AS price, s.discount, s.final_amount AS finalAmount,
-  s.frozen_at AS frozenAt, s.notes, s.created_at AS createdAt,
-  m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName, m.phone,
-  p.name AS planName, p.duration_days AS durationDays,
-  DATEDIFF(s.end_date, CURDATE()) AS daysLeft,
+  s.id, s.member_id AS "memberId", s.plan_id AS "planId",
+  s.start_date AS "startDate", s.end_date AS "endDate", s.status,
+  s.price_at_purchase AS "price", s.discount, s.final_amount AS "finalAmount",
+  s.frozen_at AS "frozenAt", s.notes, s.created_at AS "createdAt",
+  m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName", m.phone,
+  p.name AS "planName", p.duration_days AS "durationDays",
+  (s.end_date - CURRENT_DATE) AS "daysLeft",
   (SELECT COALESCE(SUM(pay.amount), 0) FROM payments pay
-   WHERE pay.subscription_id = s.id AND pay.status = 'paid') AS amountPaid
+   WHERE pay.subscription_id = s.id AND pay.status = 'paid') AS "amountPaid"
 `;
 
 const SUB_FROM = `
@@ -92,7 +92,7 @@ router.get(
       `SELECT ${SUB_SELECT} ${SUB_FROM} ${clause} ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     );
-    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS total ${SUB_FROM} ${clause}`, params);
+    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS "total" ${SUB_FROM} ${clause}`, params);
 
     res.json(paged(rows, Number(countRow?.total ?? 0), page, limit));
   }),
@@ -105,7 +105,7 @@ router.get(
     const rows = await query(
       `SELECT ${SUB_SELECT} ${SUB_FROM}
        WHERE s.status = 'active' AND m.deleted_at IS NULL AND m.status = 'active'
-         AND s.end_date >= CURDATE() AND s.end_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+         AND s.end_date >= CURRENT_DATE AND s.end_date <= (CURRENT_DATE + (?::int * interval '1 day'))
        ORDER BY s.end_date ASC`,
       [days],
     );

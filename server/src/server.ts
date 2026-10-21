@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import cron from 'node-cron';
 import { app } from './app';
 import { env } from './config/env';
-import { pool, query } from './db/pool';
+import { pool, query, ensureDatabaseTimezone } from './db/pool';
 import { runExpiryJob } from './jobs/expiry';
 
 /**
@@ -34,7 +34,10 @@ function listen(attempt = 1): Promise<Server> {
 
 async function start() {
   await query('SELECT 1');
-  console.log(`Connected to MySQL at ${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`);
+  await ensureDatabaseTimezone();
+  console.log(
+    `Connected to PostgreSQL (${env.DATABASE_URL ? 'DATABASE_URL' : `${env.DB_HOST}:${env.DB_PORT}/${env.DB_NAME}`}), timezone ${env.GYM_TIMEZONE}`,
+  );
 
   runExpiryJob()
     .then((result) =>
@@ -42,13 +45,19 @@ async function start() {
     )
     .catch((error) => console.error('Expiry sweep failed', error));
 
-  cron.schedule('5 0 * * *', () => {
-    runExpiryJob()
-      .then((result) =>
-        console.log(`Expiry sweep: ${result.expired} lapsed, ${result.alertsCreated} new alerts (${result.leadDays}-day window)`),
-      )
-      .catch((error) => console.error('Expiry sweep failed', error));
-  });
+  cron.schedule(
+    '5 0 * * *',
+    () => {
+      runExpiryJob()
+        .then((result) =>
+          console.log(
+            `Expiry sweep: ${result.expired} lapsed, ${result.alertsCreated} new alerts (${result.leadDays}-day window)`,
+          ),
+        )
+        .catch((error) => console.error('Expiry sweep failed', error));
+    },
+    { timezone: env.GYM_TIMEZONE },
+  );
 
   const server = await listen();
   console.log(`API ready on http://localhost:${env.PORT}`);

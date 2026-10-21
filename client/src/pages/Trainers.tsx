@@ -227,7 +227,6 @@ export function Trainers() {
                 setFormOpen(true);
               }}
             >
-              <Icon name="plus" size={16} />
               Add trainer
             </button>
           ) : undefined
@@ -243,7 +242,6 @@ export function Trainers() {
       ) : trainers.length === 0 ? (
         <div className="card">
           <EmptyState
-            icon="trainers"
             title="No trainers yet"
             message="Add your coaching team to start assigning members."
             action={
@@ -282,12 +280,11 @@ export function Trainers() {
                   </div>
                   <div className="summary-row">
                     <span>Hired</span>
-                    <strong>{trainer.hireDate ? formatDate(trainer.hireDate) : '—'}</strong>
+                    <strong>{trainer.hireDate ? formatDate(trainer.hireDate) : 'Not set'}</strong>
                   </div>
                 </div>
                 <div className="row-between plan-foot">
                   <button type="button" className="btn btn-soft btn-sm" onClick={() => setRosterTrainer(trainer)}>
-                    <Icon name="members" size={14} />
                     View roster
                   </button>
                   {canManage && (
@@ -365,7 +362,7 @@ export function Trainers() {
               <div className="skeleton" style={{ height: 48 }} />
             </div>
           ) : roster.length === 0 ? (
-            <EmptyState icon="members" title="No members assigned" message="Assign members to build this trainer's roster." />
+            <EmptyState title="No members assigned" message="Assign members to build this trainer's roster." />
           ) : (
             <div className="table-wrap" style={{ margin: '0 -20px' }}>
               <table className="table">

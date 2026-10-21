@@ -12,10 +12,10 @@ router.get(
     const onlyUnread = req.query.unread === 'true';
 
     const rows = await query(
-      `SELECT n.id, n.member_id AS memberId, n.subscription_id AS subscriptionId, n.type,
-              n.title, n.body, n.read_at AS readAt, n.created_at AS createdAt,
-              m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName,
-              m.photo_url AS photoUrl
+      `SELECT n.id, n.member_id AS "memberId", n.subscription_id AS "subscriptionId", n.type,
+              n.title, n.body, n.read_at AS "readAt", n.created_at AS "createdAt",
+              m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName",
+              m.photo_url AS "photoUrl"
        FROM notifications n
        LEFT JOIN members m ON m.id = n.member_id
        ${onlyUnread ? 'WHERE n.read_at IS NULL' : ''}
@@ -24,7 +24,7 @@ router.get(
       [limit],
     );
 
-    const unread = await queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM notifications WHERE read_at IS NULL');
+    const unread = await queryOne<{ count: number }>('SELECT COUNT(*) AS "count" FROM notifications WHERE read_at IS NULL');
 
     res.json({ data: rows, unread: Number(unread?.count ?? 0) });
   }),

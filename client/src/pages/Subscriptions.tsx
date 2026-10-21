@@ -68,7 +68,6 @@ export function Subscriptions() {
         subtitle="Every plan sold, its status and how much has been collected."
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setOpenNew(true)}>
-            <Icon name="plus" size={16} />
             Sell membership
           </button>
         }
@@ -76,14 +75,12 @@ export function Subscriptions() {
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={16} />
           <span>{error}</span>
         </div>
       )}
 
       {dueSoon.length > 0 && (
         <div className="notice" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={17} />
           <div style={{ flex: 1 }}>
             <strong style={{ color: 'var(--text)' }}>
               {dueSoon.length} membership{dueSoon.length === 1 ? '' : 's'} expire in the next {settings.alertLeadDays} days
@@ -158,7 +155,7 @@ export function Subscriptions() {
                         </td>
                         <td>
                           <span className="nowrap">
-                            {formatShortDate(subscription.startDate)} → {formatDate(subscription.endDate)}
+                            {formatShortDate(subscription.startDate)} to {formatDate(subscription.endDate)}
                           </span>
                           <span className="cell-sub">
                             {subscription.status === 'active' ? daysLabel(subscription.daysLeft) : subscription.status}
@@ -216,7 +213,6 @@ export function Subscriptions() {
 
         {!loading && subscriptions.length === 0 && (
           <EmptyState
-            icon="memberships"
             title="No memberships here"
             message="Sell a plan to a member and it will show up in this list."
             action={

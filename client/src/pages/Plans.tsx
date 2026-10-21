@@ -190,7 +190,6 @@ export function Plans() {
                 setOpen(true);
               }}
             >
-              <Icon name="plus" size={16} />
               New plan
             </button>
           ) : undefined
@@ -206,7 +205,6 @@ export function Plans() {
       ) : plans.length === 0 ? (
         <div className="card">
           <EmptyState
-            icon="plans"
             title="No plans yet"
             message="Create your first membership plan to start selling."
             action={
@@ -240,7 +238,6 @@ export function Plans() {
                 <p className="plan-desc">{plan.description ?? 'No description.'}</p>
                 <div className="row-between plan-foot">
                   <span className="chip">
-                    <Icon name="calendar" size={13} />
                     {plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'} access
                   </span>
                   {canManage && (

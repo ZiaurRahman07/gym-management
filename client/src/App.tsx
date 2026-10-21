@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { Icon } from './components/Icon';
 import { useAuth } from './context/AuthContext';
+import type { Role } from './api/types';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Members } from './pages/Members';
@@ -22,10 +22,8 @@ function Protected({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="splash">
-        <span className="brand-mark">
-          <Icon name="dumbbell" size={22} />
-        </span>
-        <span>Loading your gym…</span>
+        <span className="splash-wordmark">Gym management</span>
+        <span>Loading...</span>
       </div>
     );
   }
@@ -34,12 +32,16 @@ function Protected({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!roles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function NotFound() {
   return (
     <div className="splash">
-      <span className="empty-icon">
-        <Icon name="alert" size={22} />
-      </span>
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Page not found</h1>
       <p className="muted small">That page does not exist or has moved.</p>
       <Link to="/" className="btn btn-primary btn-sm">
@@ -63,13 +65,48 @@ export function App() {
         <Route index element={<Dashboard />} />
         <Route path="/members" element={<Members />} />
         <Route path="/members/:id" element={<MemberDetail />} />
-        <Route path="/subscriptions" element={<Subscriptions />} />
-        <Route path="/payments" element={<Payments />} />
+        <Route
+          path="/subscriptions"
+          element={
+            <RequireRole roles={['admin', 'receptionist']}>
+              <Subscriptions />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <RequireRole roles={['admin', 'receptionist']}>
+              <Payments />
+            </RequireRole>
+          }
+        />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/trainers" element={<Trainers />} />
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route
+          path="/plans"
+          element={
+            <RequireRole roles={['admin', 'receptionist']}>
+              <Plans />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <RequireRole roles={['admin', 'receptionist']}>
+              <Reports />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireRole roles={['admin']}>
+              <Settings />
+            </RequireRole>
+          }
+        />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

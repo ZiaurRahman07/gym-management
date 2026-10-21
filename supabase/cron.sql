@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Optional: schedule the nightly expiry sweep with pg_cron.
 --
--- 1. Supabase Dashboard → Database → Extensions → enable "pg_cron".
+-- 1. Supabase Dashboard -> Database -> Extensions -> enable "pg_cron".
 -- 2. Run this file in the SQL Editor.
 --
 -- pg_cron uses UTC. '5 0 * * *' = 00:05 UTC every day.

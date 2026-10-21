@@ -3,22 +3,22 @@ import { z } from 'zod';
 import { execute, query, queryOne } from '../db/pool';
 import { logAudit } from '../lib/audit';
 import { badRequest, conflict, notFound } from '../lib/errors';
-import { asyncHandler, getPagination, like, paged, parseBody, parseId } from '../lib/helpers';
+import { asyncHandler, getPagination, like, paged, parseBody, parseId, todayStr } from '../lib/helpers';
 import { requireRole } from '../middleware/auth';
 
 const router = Router();
 
 async function allowExpiredCheckin(): Promise<boolean> {
-  const setting = await queryOne<{ value: string }>('SELECT `value` FROM settings WHERE `key` = ?', [
+  const setting = await queryOne<{ value: string }>('SELECT "value" FROM settings WHERE "key" = ?', [
     'allow_expired_checkin',
   ]);
   return setting?.value === 'true';
 }
 
 const ATT_SELECT = `
-  a.id, a.member_id AS memberId, a.check_in_at AS checkInAt, a.check_out_at AS checkOutAt, a.method,
-  m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName, m.photo_url AS photoUrl,
-  p.name AS planName
+  a.id, a.member_id AS "memberId", a.check_in_at AS "checkInAt", a.check_out_at AS "checkOutAt", a.method,
+  m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName", m.photo_url AS "photoUrl",
+  p.name AS "planName"
 `;
 
 const ATT_FROM = `
@@ -36,7 +36,7 @@ router.get(
   asyncHandler(async (_req, res) => {
     const rows = await query(
       `SELECT ${ATT_SELECT} ${ATT_FROM}
-       WHERE a.check_in_at >= CURDATE() AND a.check_in_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+       WHERE a.check_in_at >= CURRENT_DATE AND a.check_in_at < (CURRENT_DATE + interval '1 day')
        ORDER BY a.check_in_at DESC`,
     );
     const inside = rows.filter((row) => !(row as { checkOutAt: string | null }).checkOutAt);
@@ -64,7 +64,7 @@ router.get(
     const params: unknown[] = [];
 
     if (date) {
-      where.push('a.check_in_at >= ? AND a.check_in_at < DATE_ADD(?, INTERVAL 1 DAY)');
+      where.push(`a.check_in_at >= ?::date AND a.check_in_at < (?::date + interval '1 day')`);
       params.push(date, date);
     }
     if (memberId) {
@@ -82,7 +82,7 @@ router.get(
       `SELECT ${ATT_SELECT} ${ATT_FROM} ${clause} ORDER BY a.check_in_at DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     );
-    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS total ${ATT_FROM} ${clause}`, params);
+    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS "total" ${ATT_FROM} ${clause}`, params);
 
     res.json(paged(rows, Number(countRow?.total ?? 0), page, limit));
   }),
@@ -104,8 +104,8 @@ router.post(
       endDate: string | null;
       memberCode: string;
     }>(
-      `SELECT m.id, m.status, m.first_name AS firstName, m.last_name AS lastName, m.member_code AS memberCode,
-              s.id AS subscriptionId, s.status AS subscriptionStatus, s.end_date AS endDate
+      `SELECT m.id, m.status, m.first_name AS "firstName", m.last_name AS "lastName", m.member_code AS "memberCode",
+              s.id AS "subscriptionId", s.status AS "subscriptionStatus", s.end_date AS "endDate"
        FROM members m
        LEFT JOIN subscriptions s ON s.id = (
          SELECT s2.id FROM subscriptions s2 WHERE s2.member_id = m.id AND s2.status = 'active'
@@ -118,10 +118,7 @@ router.post(
     if (!member) throw notFound('Member not found.');
     if (member.status !== 'active') throw badRequest('This member is not active.');
 
-    const today = new Date();
-    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
-      today.getDate(),
-    ).padStart(2, '0')}`;
+    const todayIso = todayStr();
 
     if (!member.subscriptionId) {
       throw badRequest(`${member.firstName} ${member.lastName} has no active membership.`);
@@ -133,7 +130,7 @@ router.post(
     }
 
     const open = await queryOne<{ id: number; checkInAt: string }>(
-      'SELECT id, check_in_at AS checkInAt FROM attendance WHERE member_id = ? AND check_out_at IS NULL ORDER BY id DESC LIMIT 1',
+      'SELECT id, check_in_at AS "checkInAt" FROM attendance WHERE member_id = ? AND check_out_at IS NULL ORDER BY id DESC LIMIT 1',
       [body.memberId],
     );
     if (open) throw conflict(`Already checked in since ${open.checkInAt}.`);

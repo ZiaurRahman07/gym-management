@@ -3,7 +3,6 @@ import { ApiError } from '../api/client';
 import { api } from '../api/endpoints';
 import type { ReportAttendance, ReportMembers, ReportRevenue, ReportTrainers } from '../api/types';
 import { AreaChart, BarChart } from '../components/Charts';
-import { Icon } from '../components/Icon';
 import { Badge, PageHead, StatCard, Tabs } from '../components/ui';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
@@ -61,7 +60,7 @@ export function Reports() {
         subtitle="Revenue, membership growth, attendance patterns and trainer performance."
         actions={
           <button type="button" className="btn btn-outline" onClick={exportCsv} disabled={exporting}>
-            {exporting ? <span className="spinner" /> : <Icon name="download" size={16} />}
+            {exporting ? <span className="spinner" /> : null}
             Export CSV
           </button>
         }
@@ -105,7 +104,6 @@ export function Reports() {
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={16} />
           <span>{error}</span>
         </div>
       )}
@@ -143,18 +141,14 @@ export function Reports() {
     return (
       <>
         <div className="stat-grid stat-grid-3">
-          <StatCard label="Total collected" value={money(data.total)} icon="money" tone="success" foot={`${data.count} payments`} />
+          <StatCard label="Total collected" value={money(data.total)} foot={`${data.count} payments`} />
           <StatCard
             label="Average payment"
             value={money(data.count ? data.total / data.count : 0)}
-            icon="payments"
-            tone="teal"
           />
           <StatCard
             label="Top payment method"
-            value={data.byMethod[0] ? (PAYMENT_METHOD[data.byMethod[0].label] ?? data.byMethod[0].label) : '—'}
-            icon="tag"
-            tone="violet"
+            value={data.byMethod[0] ? (PAYMENT_METHOD[data.byMethod[0].label] ?? data.byMethod[0].label) : '-'}
             foot={data.byMethod[0] ? money(data.byMethod[0].value) : undefined}
           />
         </div>
@@ -270,10 +264,10 @@ export function Reports() {
     return (
       <>
         <div className="stat-grid">
-          <StatCard label="New members" value={data.newMembers} icon="members" tone="violet" foot="Joined in this period" />
-          <StatCard label="Active members" value={data.activeNow} icon="check" tone="success" foot="Current memberships" />
-          <StatCard label="Expiring in 7 days" value={data.expiring} icon="alert" tone="warning" />
-          <StatCard label="Churned members" value={data.churned} icon="power" tone="rose" foot="No active membership" />
+          <StatCard label="New members" value={data.newMembers} foot="Joined in this period" />
+          <StatCard label="Active members" value={data.activeNow} foot="Current memberships" />
+          <StatCard label="Expiring in 7 days" value={data.expiring} />
+          <StatCard label="Churned members" value={data.churned} foot="No active membership" />
         </div>
 
         <section className="card" style={{ marginBottom: 18 }}>
@@ -323,18 +317,16 @@ export function Reports() {
 
   function AttendanceView({ report: data }: { report: ReportAttendance }) {
     const peak = [...data.peakHours].sort((a, b) => b.value - a.value)[0];
-    const peakLabel = peak ? new Date(2024, 0, 1, peak.hour).toLocaleTimeString('en-US', { hour: 'numeric' }) : '—';
+    const peakLabel = peak ? new Date(2024, 0, 1, peak.hour).toLocaleTimeString('en-US', { hour: 'numeric' }) : '-';
 
     return (
       <>
         <div className="stat-grid stat-grid-3">
-          <StatCard label="Total check-ins" value={data.totalVisits} icon="attendance" tone="blue" />
-          <StatCard label="Unique members" value={data.uniqueMembers} icon="members" tone="violet" />
+          <StatCard label="Total check-ins" value={data.totalVisits} />
+          <StatCard label="Unique members" value={data.uniqueMembers} />
           <StatCard
             label="Average visit"
-            value={data.avgDurationMinutes ? `${data.avgDurationMinutes} min` : '—'}
-            icon="clock"
-            tone="teal"
+            value={data.avgDurationMinutes ? `${data.avgDurationMinutes} min` : '-'}
             foot={peak ? `Peak hour ${peakLabel}` : undefined}
           />
         </div>
@@ -368,7 +360,7 @@ export function Reports() {
                   value: row.value,
                 }))}
                 height={220}
-                color="#8b5cf6"
+                color="#145c4a"
               />
             </div>
           </section>
@@ -414,9 +406,9 @@ export function Reports() {
     return (
       <>
         <div className="stat-grid stat-grid-3">
-          <StatCard label="Active trainers" value={data.trainers.length} icon="trainers" tone="violet" />
-          <StatCard label="Assigned members" value={data.totalAssigned} icon="members" tone="blue" />
-          <StatCard label="Roster check-ins" value={data.totalVisits} icon="attendance" tone="teal" />
+          <StatCard label="Active trainers" value={data.trainers.length} />
+          <StatCard label="Assigned members" value={data.totalAssigned} />
+          <StatCard label="Roster check-ins" value={data.totalVisits} />
         </div>
 
         <section className="card">
@@ -442,7 +434,7 @@ export function Reports() {
                     <td>
                       <strong>{trainer.name}</strong>
                     </td>
-                    <td>{trainer.specialization ?? '—'}</td>
+                    <td>{trainer.specialization ?? '-'}</td>
                     <td className="num">{trainer.assignedMembers}</td>
                     <td className="num">{trainer.visits}</td>
                   </tr>

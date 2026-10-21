@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/endpoints';
 import type { DashboardStats } from '../api/types';
 import { AreaChart, Donut } from '../components/Charts';
-import { Icon } from '../components/Icon';
 import { Avatar, Badge, EmptyState, PageHead, StatCard } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -25,25 +24,31 @@ export function Dashboard() {
     { label: 'No plan', value: (breakdown.none ?? 0) + (breakdown.cancelled ?? 0), color: TONE_COLORS.muted },
   ];
 
-  const dateLabel = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formatDay = (timeZone?: string) =>
+    new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      ...(timeZone ? { timeZone } : {}),
+    });
+  let dateLabel = formatDay();
+  try {
+    dateLabel = formatDay(settings.timezone);
+  } catch {
+    /* fall back to the browser timezone if the stored value is invalid */
+  }
 
   return (
     <>
       <PageHead
-        title={`${greeting()}, ${user?.name?.split(' ')[0] ?? 'there'}`}
+        title={`${greeting(settings.timezone)}, ${user?.name?.split(' ')[0] ?? 'there'}`}
         subtitle={`Here's how ${settings.gymName} is doing · ${dateLabel}`}
         actions={
           <>
             <Link className="btn btn-outline" to="/reports">
-              <Icon name="reports" size={16} />
               Reports
             </Link>
             <Link className="btn btn-primary" to="/attendance">
-              <Icon name="attendance" size={16} />
               Check in member
             </Link>
           </>
@@ -52,7 +57,6 @@ export function Dashboard() {
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: 16 }}>
-          <Icon name="alert" size={16} />
           <span>{error}</span>
         </div>
       )}
@@ -60,14 +64,11 @@ export function Dashboard() {
       <div className="stat-grid">
         <StatCard
           label="Active members"
-          value={loading && !stats ? '—' : (stats?.activeMembers ?? 0).toLocaleString()}
-          icon="members"
-          tone="violet"
+          value={loading && !stats ? '-' : (stats?.activeMembers ?? 0).toLocaleString()}
           onClick={() => navigate('/members?status=active')}
           foot={
             <>
               <span className="delta up">
-                <Icon name="plus" size={11} />
                 {stats?.newMembersThisMonth ?? 0}
               </span>
               joined this month
@@ -76,9 +77,7 @@ export function Dashboard() {
         />
         <StatCard
           label="Revenue this month"
-          value={loading && !stats ? '—' : money(stats?.monthRevenue ?? 0)}
-          icon="payments"
-          tone="teal"
+          value={loading && !stats ? '-' : money(stats?.monthRevenue ?? 0)}
           onClick={() => navigate('/payments')}
           foot={
             <>
@@ -92,17 +91,13 @@ export function Dashboard() {
         />
         <StatCard
           label="Check-ins today"
-          value={loading && !stats ? '—' : (stats?.todayCheckins ?? 0).toLocaleString()}
-          icon="attendance"
-          tone="blue"
+          value={loading && !stats ? '-' : (stats?.todayCheckins ?? 0).toLocaleString()}
           onClick={() => navigate('/attendance')}
           foot={<>{stats?.insideNow ?? 0} currently in the gym</>}
         />
         <StatCard
           label={`Expiring in ${settings.alertLeadDays} days`}
-          value={loading && !stats ? '—' : (stats?.expiringSoon ?? 0).toLocaleString()}
-          icon="alert"
-          tone="amber"
+          value={loading && !stats ? '-' : (stats?.expiringSoon ?? 0).toLocaleString()}
           onClick={() => navigate('/subscriptions')}
           foot={<>Memberships needing a renewal</>}
         />
@@ -194,7 +189,6 @@ export function Dashboard() {
             </div>
           ) : (
             <EmptyState
-              icon="check"
               title="No renewals due"
               message={`No memberships expire in the next ${settings.alertLeadDays} days.`}
             />
@@ -215,9 +209,6 @@ export function Dashboard() {
             <div className="list">
               {stats.recentPayments.map((payment) => (
                 <Link className="list-row" key={payment.id} to="/payments">
-                  <span className="list-icon" style={{ background: 'var(--success-soft)', color: '#0b8a52' }}>
-                    <Icon name="money" size={17} />
-                  </span>
                   <div className="list-main">
                     <div className="list-title">
                       {payment.firstName} {payment.lastName}
@@ -234,7 +225,7 @@ export function Dashboard() {
               ))}
             </div>
           ) : (
-            <EmptyState icon="payments" title="No payments yet" message="Payments will appear here as they are recorded." />
+            <EmptyState title="No payments yet" message="Payments will appear here as they are recorded." />
           )}
         </section>
       </div>
@@ -246,7 +237,6 @@ export function Dashboard() {
             <div className="card-sub">Registrations from the last few days</div>
           </div>
           <Link to="/members?new=1" className="btn btn-soft btn-sm">
-            <Icon name="plus" size={15} />
             Add member
           </Link>
         </div>
@@ -281,7 +271,7 @@ export function Dashboard() {
                     <Badge tone={member.planName ? 'success' : 'muted'}>{member.planName ? 'Registered' : 'Lead'}</Badge>
                   </td>
                   <td className="text-right">
-                    <Icon name="chevronRight" size={16} />
+                    
                   </td>
                 </tr>
               ))}
@@ -298,7 +288,7 @@ export function Dashboard() {
       </section>
 
       <p className="small muted" style={{ marginTop: 14 }}>
-        Demo data as of {formatShortDate(todayInput())}. Expiry alerts refresh automatically every night at 00:05.
+        Data as of {formatShortDate(todayInput())}. Expiry alerts refresh automatically every night at 00:05.
       </p>
     </>
   );

@@ -37,8 +37,11 @@ type UserRow = {
   email: string;
   password_hash: string;
   role: Role;
-  is_active: number;
+  is_active: boolean;
 };
+
+// Used when the email does not exist so a failed login takes similar time.
+const DUMMY_HASH = '$2b$10$miOcYTU97NCNBuT0jr.TX.B8MS.UQsit1zBa.KDhqcasrFUXeSVii';
 
 function publicUser(user: Omit<UserRow, 'password_hash' | 'is_active'>) {
   return { id: user.id, name: user.name, email: user.email, role: user.role };
@@ -51,7 +54,8 @@ router.post(
     const body = parseBody(loginSchema, req.body);
     const user = await queryOne<UserRow>('SELECT * FROM users WHERE email = ?', [body.email]);
 
-    if (!user || !(await bcrypt.compare(body.password, user.password_hash))) {
+    const passwordMatches = await bcrypt.compare(body.password, user?.password_hash ?? DUMMY_HASH);
+    if (!user || !passwordMatches) {
       throw new HttpError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect.');
     }
     if (!user.is_active) {
@@ -116,7 +120,7 @@ router.post(
     if (!user || !(await bcrypt.compare(body.currentPassword, user.password_hash))) {
       throw badRequest('Your current password is incorrect.');
     }
-    const hash = await bcrypt.hash(body.newPassword, 10);
+    const hash = await bcrypt.hash(body.newPassword, 12);
     await execute('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.user!.id]);
     res.json({ ok: true });
   }),

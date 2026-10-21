@@ -53,7 +53,6 @@ export function MemberDetail() {
   if (error || !member) {
     return (
       <EmptyState
-        icon="alert"
         title="Member not found"
         message={error ?? 'This member may have been archived.'}
         action={
@@ -112,7 +111,6 @@ export function MemberDetail() {
   return (
     <>
       <Link to="/members" className="back-link">
-        <Icon name="arrowLeft" size={15} />
         All members
       </Link>
 
@@ -128,28 +126,27 @@ export function MemberDetail() {
             <div className="row wrap muted small" style={{ gap: 14, marginTop: 5 }}>
               <span className="mono">{member.memberCode}</span>
               <span className="row" style={{ gap: 5 }}>
-                <Icon name="phone" size={13} /> {member.phone}
+                {member.phone}
               </span>
               {member.email && (
                 <span className="row" style={{ gap: 5 }}>
-                  <Icon name="mail" size={13} /> {member.email}
+                  {member.email}
                 </span>
               )}
               <span className="row" style={{ gap: 5 }}>
-                <Icon name="calendar" size={13} /> Joined {formatDate(member.joinDate)}
+                Joined {formatDate(member.joinDate)}
               </span>
             </div>
           </div>
         </div>
         <div className="profile-actions">
           <button type="button" className="btn btn-primary" onClick={checkIn} disabled={checkingIn}>
-            {checkingIn ? <span className="spinner" /> : <Icon name="check" size={16} />}
+            {checkingIn ? <span className="spinner" /> : null}
             Check in
           </button>
           {canManage && (
             <>
               <button type="button" className="btn btn-outline" onClick={() => setRenewOpen(true)}>
-                <Icon name="refresh" size={15} />
                 Renew
               </button>
               <button type="button" className="btn btn-outline" onClick={() => setEditOpen(true)}>
@@ -196,25 +193,25 @@ export function MemberDetail() {
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Email</div>
-                      <div className="detail-value">{member.email ?? '—'}</div>
+                      <div className="detail-value">{member.email ?? 'Not provided'}</div>
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Date of birth</div>
-                      <div className="detail-value">{member.dob ? formatDate(member.dob) : '—'}</div>
+                      <div className="detail-value">{member.dob ? formatDate(member.dob) : 'Not provided'}</div>
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Gender</div>
                       <div className="detail-value" style={{ textTransform: 'capitalize' }}>
-                        {member.gender ?? '—'}
+                        {member.gender ?? 'Not provided'}
                       </div>
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Address</div>
-                      <div className="detail-value">{member.address ?? '—'}</div>
+                      <div className="detail-value">{member.address ?? 'Not provided'}</div>
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Emergency contact</div>
-                      <div className="detail-value">{member.emergencyContact ?? '—'}</div>
+                      <div className="detail-value">{member.emergencyContact ?? 'Not provided'}</div>
                     </div>
                     <div className="detail-item">
                       <div className="detail-label">Member since</div>
@@ -250,7 +247,6 @@ export function MemberDetail() {
                     <div className="chip-row">
                       {member.trainers.map((trainer) => (
                         <span className="chip" key={trainer.id}>
-                          <Icon name="trainers" size={13} />
                           {trainer.name}
                           {trainer.specialization ? ` · ${trainer.specialization}` : ''}
                         </span>
@@ -282,7 +278,7 @@ export function MemberDetail() {
                             <span className="cell-sub">{subscription.durationDays} days</span>
                           </td>
                           <td>
-                            {formatDate(subscription.startDate)} → {formatDate(subscription.endDate)}
+                            {formatDate(subscription.startDate)} to {formatDate(subscription.endDate)}
                           </td>
                           <td className="num">{money(subscription.finalAmount)}</td>
                           <td>
@@ -295,7 +291,6 @@ export function MemberDetail() {
                       <tr>
                         <td colSpan={4}>
                           <EmptyState
-                            icon="memberships"
                             title="No memberships yet"
                             message="Start a plan to give this member gym access."
                             action={
@@ -344,7 +339,7 @@ export function MemberDetail() {
                     {member.payments.length === 0 && (
                       <tr>
                         <td colSpan={5}>
-                          <EmptyState icon="payments" title="No payments" message="Payments recorded for this member appear here." />
+                          <EmptyState title="No payments" message="Payments recorded for this member appear here." />
                         </td>
                       </tr>
                     )}
@@ -376,7 +371,7 @@ export function MemberDetail() {
                     {member.attendance.length === 0 && (
                       <tr>
                         <td colSpan={4}>
-                          <EmptyState icon="attendance" title="No visits yet" message="Check this member in from the Attendance page." />
+                          <EmptyState title="No visits yet" message="Check this member in from the Attendance page." />
                         </td>
                       </tr>
                     )}
@@ -399,8 +394,8 @@ export function MemberDetail() {
                   {member.planName}
                 </div>
                 <div className="muted small" style={{ marginTop: 3 }}>
-                  {member.subscriptionStart ? formatDate(member.subscriptionStart) : '—'} →{' '}
-                  {member.subscriptionEnd ? formatDate(member.subscriptionEnd) : '—'}
+                  {member.subscriptionStart ? formatDate(member.subscriptionStart) : 'Not set'} to{' '}
+                  {member.subscriptionEnd ? formatDate(member.subscriptionEnd) : 'Not set'}
                 </div>
                 <div className="progress" style={{ margin: '14px 0 8px' }}>
                   <div className="progress-fill" style={{ width: `${progress}%` }} />
@@ -415,7 +410,6 @@ export function MemberDetail() {
                 </div>
                 {canManage && (
                   <button type="button" className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={() => setRenewOpen(true)}>
-                    <Icon name="refresh" size={15} />
                     Renew membership
                   </button>
                 )}
@@ -451,11 +445,11 @@ export function MemberDetail() {
               </div>
               <div className="summary-row">
                 <span>Last visit</span>
-                <strong>{member.stats.lastVisit ? formatDate(member.stats.lastVisit) : '—'}</strong>
+                <strong>{member.stats.lastVisit ? formatDate(member.stats.lastVisit) : 'No visits'}</strong>
               </div>
               <div className="summary-row">
                 <span>Days left</span>
-                <strong>{member.daysLeft !== null ? daysLabel(member.daysLeft) : '—'}</strong>
+                <strong>{member.daysLeft !== null ? daysLabel(member.daysLeft) : 'No plan'}</strong>
               </div>
             </div>
           </section>

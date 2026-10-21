@@ -26,22 +26,22 @@ function parse(value: string): Date {
 }
 
 export function formatDate(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   return parse(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function formatShortDate(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   return parse(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export function formatTime(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   return parse(value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return '—';
+  if (!value) return '-';
   return `${formatDate(value)} · ${formatTime(value)}`;
 }
 
@@ -68,7 +68,7 @@ export function nowInput(): string {
 }
 
 export function daysLabel(days: number | null | undefined): string {
-  if (days === null || days === undefined) return '—';
+  if (days === null || days === undefined) return '-';
   if (days < 0) return `${Math.abs(days)}d ago`;
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
@@ -79,7 +79,7 @@ export function initials(first: string, last: string): string {
   return `${(first[0] ?? '').toUpperCase()}${(last[0] ?? '').toUpperCase()}`;
 }
 
-const TONES = ['violet', 'blue', 'teal', 'amber', 'rose', 'indigo'];
+const TONES = ['blue', 'teal', 'amber', 'rose', 'info'];
 
 export function avatarTone(name: string): string {
   let hash = 0;
@@ -87,8 +87,17 @@ export function avatarTone(name: string): string {
   return TONES[hash % TONES.length];
 }
 
-export function greeting(): string {
-  const hour = new Date().getHours();
+export function greeting(timeZone?: string): string {
+  let hour = new Date().getHours();
+  if (timeZone) {
+    try {
+      hour = Number(
+        new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone }).format(new Date()),
+      );
+    } catch {
+      /* keep the browser hour if the timezone is not recognised */
+    }
+  }
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';

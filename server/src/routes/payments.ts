@@ -10,10 +10,10 @@ import { createPaymentTx } from '../services/billing';
 const router = Router();
 
 const PAY_SELECT = `
-  pay.id, pay.invoice_no AS invoiceNo, pay.member_id AS memberId, pay.subscription_id AS subscriptionId,
-  pay.amount, pay.method, pay.status, pay.paid_at AS paidAt, pay.notes, pay.created_at AS createdAt,
-  m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName, m.phone,
-  p.name AS planName, u.name AS recordedByName
+  pay.id, pay.invoice_no AS "invoiceNo", pay.member_id AS "memberId", pay.subscription_id AS "subscriptionId",
+  pay.amount, pay.method, pay.status, pay.paid_at AS "paidAt", pay.notes, pay.created_at AS "createdAt",
+  m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName", m.phone,
+  p.name AS "planName", u.name AS "recordedByName"
 `;
 
 const PAY_FROM = `
@@ -65,11 +65,11 @@ router.get(
       params.push(memberId);
     }
     if (from) {
-      where.push('DATE(pay.paid_at) >= ?');
+      where.push('(pay.paid_at)::date >= ?');
       params.push(from);
     }
     if (to) {
-      where.push('DATE(pay.paid_at) <= ?');
+      where.push('(pay.paid_at)::date <= ?');
       params.push(to);
     }
 
@@ -78,10 +78,10 @@ router.get(
       `SELECT ${PAY_SELECT} ${PAY_FROM} ${clause} ORDER BY pay.paid_at DESC, pay.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset],
     );
-    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS total ${PAY_FROM} ${clause}`, params);
+    const countRow = await queryOne<{ total: number }>(`SELECT COUNT(*) AS "total" ${PAY_FROM} ${clause}`, params);
     const totals = await queryOne<{ paid: number; refunded: number }>(
-      `SELECT COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount ELSE 0 END), 0) AS paid,
-              COALESCE(SUM(CASE WHEN pay.status = 'refunded' THEN pay.amount ELSE 0 END), 0) AS refunded
+      `SELECT COALESCE(SUM(CASE WHEN pay.status = 'paid' THEN pay.amount ELSE 0 END), 0) AS "paid",
+              COALESCE(SUM(CASE WHEN pay.status = 'refunded' THEN pay.amount ELSE 0 END), 0) AS "refunded"
        ${PAY_FROM} ${clause}`,
       params,
     );
@@ -105,31 +105,31 @@ router.get(
     const where = [`pay.status = 'paid'`];
     const params: unknown[] = [];
     if (from) {
-      where.push('DATE(pay.paid_at) >= ?');
+      where.push('(pay.paid_at)::date >= ?');
       params.push(from);
     }
     if (to) {
-      where.push('DATE(pay.paid_at) <= ?');
+      where.push('(pay.paid_at)::date <= ?');
       params.push(to);
     }
     const clause = `WHERE ${where.join(' AND ')}`;
 
     const labelExpr =
       groupBy === 'month'
-        ? `DATE_FORMAT(pay.paid_at, '%Y-%m')`
+        ? `to_char(pay.paid_at, 'YYYY-MM')`
         : groupBy === 'plan'
           ? `COALESCE(p.name, 'Other')`
           : groupBy === 'method'
             ? `pay.method`
-            : `DATE(pay.paid_at)`;
+            : `(pay.paid_at)::date`;
 
     const series = await query<{ label: string; value: number; count: number }>(
-      `SELECT ${labelExpr} AS label, COALESCE(SUM(pay.amount), 0) AS value, COUNT(*) AS count
+      `SELECT ${labelExpr} AS "label", COALESCE(SUM(pay.amount), 0) AS "value", COUNT(*) AS "count"
        ${PAY_FROM} ${clause} GROUP BY label ORDER BY label ASC`,
       params,
     );
     const total = await queryOne<{ total: number; count: number }>(
-      `SELECT COALESCE(SUM(pay.amount), 0) AS total, COUNT(*) AS count ${PAY_FROM} ${clause}`,
+      `SELECT COALESCE(SUM(pay.amount), 0) AS "total", COUNT(*) AS "count" ${PAY_FROM} ${clause}`,
       params,
     );
 
@@ -200,7 +200,7 @@ router.post(
     if (payment.status !== 'paid') throw badRequest('Only completed payments can be refunded.');
 
     await execute(
-      `UPDATE payments SET status = 'refunded', notes = CONCAT(COALESCE(notes, ''), ?) WHERE id = ?`,
+      `UPDATE payments SET status = 'refunded', notes = COALESCE(notes, '') || ? WHERE id = ?`,
       [body.reason ? ` Refund reason: ${body.reason}` : ' Refunded.', id],
     );
     await logAudit(req.user?.id, 'payment.refund', 'payment', id, body);

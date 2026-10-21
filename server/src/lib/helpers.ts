@@ -1,5 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ZodError, type ZodType } from 'zod';
+import { env } from '../config/env';
 import { HttpError } from './errors';
 
 type AsyncRoute = (req: Request, res: Response, next: NextFunction) => Promise<unknown>;
@@ -41,11 +42,49 @@ export function paged<T>(data: T[], total: number, page: number, limit: number) 
 }
 
 export function like(value: string): string {
-  return `%${value.trim().replace(/[%_]/g, (m) => `\\${m}`)}%`;
+  return `%${value.trim().replace(/\\/g, '\\\\').replace(/[%_]/g, (m) => `\\${m}`)}%`;
 }
 
 export function round2(value: number): number {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+const gymDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: env.GYM_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const gymDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: env.GYM_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+function formattedParts(date: Date, formatter: Intl.DateTimeFormat): Record<string, string> {
+  const parts: Record<string, string> = {};
+  for (const part of formatter.formatToParts(date)) {
+    if (part.type !== 'literal') parts[part.type] = part.value;
+  }
+  return parts;
+}
+
+/** Calendar date in the gym timezone. */
+export function gymDateStr(date = new Date()): string {
+  const parts = formattedParts(date, gymDateFormatter);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/** Local (gym timezone) timestamp without an offset, for Postgres timestamptz. */
+export function gymDateTimeStr(date = new Date()): string {
+  const parts = formattedParts(date, gymDateTimeFormatter);
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
 export function toDateStr(date: Date): string {
@@ -67,21 +106,16 @@ export function addDays(dateStr: string, days: number): string {
 }
 
 export function todayStr(): string {
-  return toDateStr(new Date());
+  return gymDateStr();
 }
 
 export function monthStart(value = new Date()): string {
-  return toDateStr(new Date(value.getFullYear(), value.getMonth(), 1));
+  return `${gymDateStr(value).slice(0, 7)}-01`;
 }
 
-/** Accepts 'YYYY-MM-DDTHH:mm', 'YYYY-MM-DD HH:mm:ss' or nothing (now). */
+/** Accepts 'YYYY-MM-DDTHH:mm', 'YYYY-MM-DD HH:mm:ss' or nothing (now, in the gym timezone). */
 export function toSqlDateTime(value?: string | null): string {
-  if (!value) {
-    const now = new Date();
-    return `${toDateStr(now)} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(
-      now.getSeconds(),
-    ).padStart(2, '0')}`;
-  }
+  if (!value) return gymDateTimeStr();
   const normalized = value.replace('T', ' ').trim();
   if (normalized.length === 16) return `${normalized}:00`;
   return normalized.slice(0, 19);

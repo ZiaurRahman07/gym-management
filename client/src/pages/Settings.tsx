@@ -81,7 +81,7 @@ function PasswordCard() {
           />
         </Field>
         <button type="submit" className="btn btn-outline btn-block" disabled={busy}>
-          {busy ? <Spinner size={15} /> : <Icon name="lock" size={15} />}
+          {busy ? <Spinner size={15} /> : null}
           Update password
         </button>
       </form>
@@ -89,8 +89,8 @@ function PasswordCard() {
   );
 }
 
-const ROLE_TONE: Record<string, 'violet' | 'info' | 'muted'> = {
-  admin: 'violet',
+const ROLE_TONE: Record<string, 'info' | 'muted'> = {
+  admin: 'info',
   receptionist: 'info',
   trainer: 'muted',
 };
@@ -304,7 +304,7 @@ export function Settings() {
       <PageHead
         title="Settings"
         subtitle="Gym profile, expiry rules and team access."
-        actions={isAdmin ? <Badge tone="violet">Administrator</Badge> : undefined}
+        actions={isAdmin ? <Badge tone="info">Administrator</Badge> : undefined}
       />
 
       <div className="split">
@@ -359,7 +359,7 @@ export function Settings() {
                       <div className="row-between" style={{ padding: '10px 0' }}>
                         <div>
                           <div className="list-title">Allow check-in with expired membership</div>
-                          <div className="list-sub">Off by default — front desk must renew before check-in.</div>
+                          <div className="list-sub">Off by default. The front desk must renew before check-in.</div>
                         </div>
                         <button
                           type="button"
@@ -397,7 +397,6 @@ export function Settings() {
                     setUserModalOpen(true);
                   }}
                 >
-                  <Icon name="plus" size={15} />
                   Add user
                 </button>
               </div>
@@ -433,7 +432,7 @@ export function Settings() {
                             {account.role.charAt(0).toUpperCase() + account.role.slice(1)}
                           </Badge>
                         </td>
-                        <td>{account.createdAt ? formatDate(account.createdAt) : '—'}</td>
+                        <td>{account.createdAt ? formatDate(account.createdAt) : '-'}</td>
                         <td>
                           <Badge tone={account.isActive ? 'success' : 'muted'}>
                             {account.isActive ? 'Active' : 'Disabled'}

@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { query, queryOne } from '../db/pool';
-import { asyncHandler } from '../lib/helpers';
+import { asyncHandler, todayStr } from '../lib/helpers';
 
 const router = Router();
 
 function lastMonths(count: number) {
   const months: { key: string; label: string }[] = [];
-  const now = new Date();
+  const [year, month] = todayStr().split('-').map(Number);
   for (let i = count - 1; i >= 0; i -= 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    months.push({ key, label: date.toLocaleString('en-US', { month: 'short' }) });
+    const date = new Date(Date.UTC(year, month - 1 - i, 1));
+    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    months.push({ key, label: date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }) });
   }
   return months;
 }
@@ -18,7 +18,7 @@ function lastMonths(count: number) {
 router.get(
   '/stats',
   asyncHandler(async (_req, res) => {
-    const setting = await queryOne<{ value: string }>('SELECT `value` FROM settings WHERE `key` = ?', [
+    const setting = await queryOne<{ value: string }>('SELECT "value" FROM settings WHERE "key" = ?', [
       'alert_lead_days',
     ]);
     const leadDays = Math.min(60, Math.max(1, Number(setting?.value) || 7));
@@ -26,77 +26,77 @@ router.get(
     const [breakdownRows, revenueSeriesRows, monthRevenue, lastMonthRevenue, recentPayments, expiringList, counters, newMembers] =
       await Promise.all([
         query<{ status: string; count: number }>(
-          `SELECT t.membershipStatus AS status, COUNT(*) AS count FROM (
+          `SELECT t."membershipStatus" AS "status", COUNT(*) AS "count" FROM (
              SELECT CASE
                WHEN m.status <> 'active' THEN 'inactive'
                WHEN s.id IS NULL THEN 'none'
                WHEN s.status = 'frozen' THEN 'frozen'
                WHEN s.status = 'cancelled' THEN 'cancelled'
-               WHEN s.end_date < CURDATE() THEN 'expired'
-               WHEN DATEDIFF(s.end_date, CURDATE()) <= ? THEN 'expiring'
+               WHEN s.end_date < CURRENT_DATE THEN 'expired'
+               WHEN (s.end_date - CURRENT_DATE) <= ? THEN 'expiring'
                ELSE 'active'
-             END AS membershipStatus
+             END AS "membershipStatus"
              FROM members m
              LEFT JOIN subscriptions s ON s.id = (
                SELECT s2.id FROM subscriptions s2 WHERE s2.member_id = m.id
                ORDER BY (s2.status = 'active') DESC, s2.end_date DESC, s2.id DESC LIMIT 1
              )
              WHERE m.deleted_at IS NULL
-           ) t GROUP BY t.membershipStatus`,
+           ) t GROUP BY t."membershipStatus"`,
           [leadDays],
         ),
         query<{ period: string; total: number }>(
-          `SELECT DATE_FORMAT(paid_at, '%Y-%m') AS period, COALESCE(SUM(amount), 0) AS total
+          `SELECT to_char(paid_at, 'YYYY-MM') AS "period", COALESCE(SUM(amount), 0) AS "total"
            FROM payments
-           WHERE status = 'paid' AND paid_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 11 MONTH), '%Y-%m-01')
+           WHERE status = 'paid' AND paid_at >= date_trunc('month', CURRENT_DATE - interval '11 months')
            GROUP BY period ORDER BY period`,
         ),
         queryOne<{ total: number }>(
-          `SELECT COALESCE(SUM(amount), 0) AS total FROM payments
-           WHERE status = 'paid' AND paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`,
+          `SELECT COALESCE(SUM(amount), 0) AS "total" FROM payments
+           WHERE status = 'paid' AND paid_at >= date_trunc('month', CURRENT_DATE)::date`,
         ),
         queryOne<{ total: number }>(
-          `SELECT COALESCE(SUM(amount), 0) AS total FROM payments
+          `SELECT COALESCE(SUM(amount), 0) AS "total" FROM payments
            WHERE status = 'paid'
-             AND paid_at >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01')
-             AND paid_at < DATE_FORMAT(CURDATE(), '%Y-%m-01')`,
+             AND paid_at >= date_trunc('month', CURRENT_DATE - interval '1 month')
+             AND paid_at < date_trunc('month', CURRENT_DATE)::date`,
         ),
         query(
-          `SELECT pay.id, pay.invoice_no AS invoiceNo, pay.amount, pay.method, pay.status,
-                  pay.paid_at AS paidAt, m.id AS memberId, m.member_code AS memberCode,
-                  m.first_name AS firstName, m.last_name AS lastName, m.photo_url AS photoUrl
+          `SELECT pay.id, pay.invoice_no AS "invoiceNo", pay.amount, pay.method, pay.status,
+                  pay.paid_at AS "paidAt", m.id AS "memberId", m.member_code AS "memberCode",
+                  m.first_name AS "firstName", m.last_name AS "lastName", m.photo_url AS "photoUrl"
            FROM payments pay JOIN members m ON m.id = pay.member_id
            ORDER BY pay.paid_at DESC, pay.id DESC LIMIT 6`,
         ),
         query(
-          `SELECT m.id, m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName,
-                  m.phone, m.photo_url AS photoUrl, s.end_date AS endDate,
-                  DATEDIFF(s.end_date, CURDATE()) AS daysLeft, p.name AS planName
+          `SELECT m.id, m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName",
+                  m.phone, m.photo_url AS "photoUrl", s.end_date AS "endDate",
+                  (s.end_date - CURRENT_DATE) AS "daysLeft", p.name AS "planName"
            FROM subscriptions s
            JOIN members m ON m.id = s.member_id
            JOIN plans p ON p.id = s.plan_id
            WHERE s.status = 'active' AND m.deleted_at IS NULL AND m.status = 'active'
-             AND s.end_date >= CURDATE() AND s.end_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+             AND s.end_date >= CURRENT_DATE AND s.end_date <= (CURRENT_DATE + (?::int * interval '1 day'))
            ORDER BY s.end_date ASC LIMIT 8`,
           [leadDays],
         ),
         Promise.all([
           queryOne<{ count: number }>(
-            `SELECT COUNT(*) AS count FROM attendance
-             WHERE check_in_at >= CURDATE() AND check_in_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)`,
+            `SELECT COUNT(*) AS "count" FROM attendance
+             WHERE check_in_at >= CURRENT_DATE AND check_in_at < (CURRENT_DATE + interval '1 day')`,
           ),
           queryOne<{ count: number }>(
-            `SELECT COUNT(*) AS count FROM attendance
-             WHERE check_out_at IS NULL AND check_in_at >= CURDATE() AND check_in_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)`,
+            `SELECT COUNT(*) AS "count" FROM attendance
+             WHERE check_out_at IS NULL AND check_in_at >= CURRENT_DATE AND check_in_at < (CURRENT_DATE + interval '1 day')`,
           ),
           queryOne<{ count: number }>(
-            `SELECT COUNT(*) AS count FROM members WHERE deleted_at IS NULL AND join_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`,
+            `SELECT COUNT(*) AS "count" FROM members WHERE deleted_at IS NULL AND join_date >= date_trunc('month', CURRENT_DATE)::date`,
           ),
-          queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM members WHERE deleted_at IS NULL'),
+          queryOne<{ count: number }>('SELECT COUNT(*) AS "count" FROM members WHERE deleted_at IS NULL'),
         ]),
         query(
-          `SELECT m.id, m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName,
-                  m.photo_url AS photoUrl, m.join_date AS joinDate, p.name AS planName
+          `SELECT m.id, m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName",
+                  m.photo_url AS "photoUrl", m.join_date AS "joinDate", p.name AS "planName"
            FROM members m
            LEFT JOIN subscriptions s ON s.id = (
              SELECT s2.id FROM subscriptions s2 WHERE s2.member_id = m.id

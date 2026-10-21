@@ -10,23 +10,23 @@ import { createSubscriptionTx } from '../services/billing';
 const router = Router();
 
 const MEMBER_SELECT = `
-  m.id, m.member_code AS memberCode, m.first_name AS firstName, m.last_name AS lastName,
-  m.email, m.phone, m.gender, m.dob, m.address, m.photo_url AS photoUrl,
-  m.emergency_contact AS emergencyContact, m.join_date AS joinDate, m.status, m.notes,
-  m.created_at AS createdAt,
-  s.id AS subscriptionId, s.start_date AS subscriptionStart, s.end_date AS subscriptionEnd,
-  s.status AS subscriptionStatus, s.final_amount AS subscriptionAmount,
-  p.id AS planId, p.name AS planName,
+  m.id, m.member_code AS "memberCode", m.first_name AS "firstName", m.last_name AS "lastName",
+  m.email, m.phone, m.gender, m.dob, m.address, m.photo_url AS "photoUrl",
+  m.emergency_contact AS "emergencyContact", m.join_date AS "joinDate", m.status, m.notes,
+  m.created_at AS "createdAt",
+  s.id AS "subscriptionId", s.start_date AS "subscriptionStart", s.end_date AS "subscriptionEnd",
+  s.status AS "subscriptionStatus", s.final_amount AS "subscriptionAmount",
+  p.id AS "planId", p.name AS "planName",
   CASE
     WHEN m.status = 'inactive' THEN 'inactive'
     WHEN m.status = 'blocked' THEN 'blocked'
     WHEN s.id IS NULL THEN 'none'
     WHEN s.status = 'frozen' THEN 'frozen'
     WHEN s.status = 'cancelled' THEN 'cancelled'
-    WHEN s.end_date < CURDATE() THEN 'expired'
+    WHEN s.end_date < CURRENT_DATE THEN 'expired'
     ELSE 'active'
-  END AS membershipStatus,
-  DATEDIFF(s.end_date, CURDATE()) AS daysLeft
+  END AS "membershipStatus",
+  (s.end_date - CURRENT_DATE) AS "daysLeft"
 `;
 
 const MEMBER_FROM = `
@@ -89,14 +89,16 @@ router.get(
       innerParams.push(status);
     }
     if (expiringIn > 0) {
-      innerWhere.push('s.status = ? AND s.end_date >= CURDATE() AND s.end_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)');
+      innerWhere.push(
+        `s.status = ? AND s.end_date >= CURRENT_DATE AND s.end_date <= (CURRENT_DATE + (?::int * interval '1 day'))`,
+      );
       innerParams.push('active', expiringIn);
     }
 
     const outerWhere: string[] = [];
     const outerParams: unknown[] = [];
     if (['active', 'expired', 'frozen', 'cancelled', 'none'].includes(status)) {
-      outerWhere.push('membershipStatus = ?');
+      outerWhere.push('"membershipStatus" = ?');
       outerParams.push(status);
     }
 
@@ -105,19 +107,19 @@ router.get(
 
     const orderBy =
       sort === 'name'
-        ? 'firstName ASC, lastName ASC'
+        ? '"firstName" ASC, "lastName" ASC'
         : sort === 'expiry'
-          ? '(subscriptionEnd IS NULL) ASC, subscriptionEnd ASC'
+          ? '("subscriptionEnd" IS NULL) ASC, "subscriptionEnd" ASC'
           : sort === 'oldest'
-            ? 'joinDate ASC'
-            : 'createdAt DESC';
+            ? '"joinDate" ASC'
+            : '"createdAt" DESC';
 
     const rows = await query(
       `SELECT * FROM (${inner}) t ${filter} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
       [...innerParams, ...outerParams, limit, offset],
     );
     const countRow = await queryOne<{ total: number }>(
-      `SELECT COUNT(*) AS total FROM (${inner}) t ${filter}`,
+      `SELECT COUNT(*) AS "total" FROM (${inner}) t ${filter}`,
       [...innerParams, ...outerParams],
     );
 
@@ -136,37 +138,37 @@ router.get(
 
     const [subscriptions, payments, attendance, trainers, totals, visitInfo] = await Promise.all([
       query(
-        `SELECT s.id, s.start_date AS startDate, s.end_date AS endDate, s.status, s.price_at_purchase AS price,
-                s.discount, s.final_amount AS finalAmount, s.created_at AS createdAt,
-                p.name AS planName, p.duration_days AS durationDays
+        `SELECT s.id, s.start_date AS "startDate", s.end_date AS "endDate", s.status, s.price_at_purchase AS "price",
+                s.discount, s.final_amount AS "finalAmount", s.created_at AS "createdAt",
+                p.name AS "planName", p.duration_days AS "durationDays"
          FROM subscriptions s JOIN plans p ON p.id = s.plan_id
          WHERE s.member_id = ? ORDER BY s.start_date DESC, s.id DESC`,
         [id],
       ),
       query(
-        `SELECT id, invoice_no AS invoiceNo, amount, method, status, paid_at AS paidAt, notes, subscription_id AS subscriptionId
+        `SELECT id, invoice_no AS "invoiceNo", amount, method, status, paid_at AS "paidAt", notes, subscription_id AS "subscriptionId"
          FROM payments WHERE member_id = ? ORDER BY paid_at DESC, id DESC`,
         [id],
       ),
       query(
-        `SELECT id, check_in_at AS checkInAt, check_out_at AS checkOutAt, method
+        `SELECT id, check_in_at AS "checkInAt", check_out_at AS "checkOutAt", method
          FROM attendance WHERE member_id = ? ORDER BY check_in_at DESC LIMIT 25`,
         [id],
       ),
       query(
-        `SELECT t.id, t.name, t.specialization, a.assigned_at AS assignedAt
+        `SELECT t.id, t.name, t.specialization, a.assigned_at AS "assignedAt"
          FROM trainer_assignments a JOIN trainers t ON t.id = a.trainer_id
          WHERE a.member_id = ? AND a.ended_at IS NULL ORDER BY t.name`,
         [id],
       ),
       queryOne<{ totalPaid: number; paymentCount: number }>(
-        `SELECT COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS totalPaid,
-                COUNT(*) AS paymentCount
+        `SELECT COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS "totalPaid",
+                COUNT(*) AS "paymentCount"
          FROM payments WHERE member_id = ?`,
         [id],
       ),
       queryOne<{ visits: number; lastVisit: string | null }>(
-        'SELECT COUNT(*) AS visits, MAX(check_in_at) AS lastVisit FROM attendance WHERE member_id = ?',
+        'SELECT COUNT(*) AS "visits", MAX(check_in_at) AS "lastVisit" FROM attendance WHERE member_id = ?',
         [id],
       ),
     ]);
@@ -309,7 +311,7 @@ router.delete(
         `UPDATE subscriptions SET status = 'cancelled' WHERE member_id = ? AND status IN ('active','frozen')`,
         [id],
       );
-      await txExecute(conn, 'UPDATE trainer_assignments SET ended_at = CURDATE() WHERE member_id = ? AND ended_at IS NULL', [
+      await txExecute(conn, 'UPDATE trainer_assignments SET ended_at = CURRENT_DATE WHERE member_id = ? AND ended_at IS NULL', [
         id,
       ]);
       await txExecute(conn, 'DELETE FROM notifications WHERE member_id = ?', [id]);
@@ -325,7 +327,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     const member = await queryOne<{ memberCode: string; firstName: string; lastName: string }>(
-      'SELECT member_code AS memberCode, first_name AS firstName, last_name AS lastName FROM members WHERE id = ? AND deleted_at IS NULL',
+      'SELECT member_code AS "memberCode", first_name AS "firstName", last_name AS "lastName" FROM members WHERE id = ? AND deleted_at IS NULL',
       [id],
     );
     if (!member) throw notFound('Member not found.');

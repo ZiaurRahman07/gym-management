@@ -9,7 +9,7 @@ export const notFoundHandler: RequestHandler = (req, res) => {
   });
 };
 
-type MysqlError = { code?: string; errno?: number; sqlMessage?: string };
+type PostgresError = { code?: string; constraint?: string; detail?: string; message?: string };
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof HttpError) {
@@ -30,25 +30,56 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return;
   }
 
-  const mysqlError = err as MysqlError;
-  if (mysqlError?.code === 'ER_DUP_ENTRY') {
+  const pgError = err as PostgresError;
+
+  if (pgError?.code === '23505') {
     res.status(409).json({
       error: { code: 'DUPLICATE', message: 'A record with that value already exists.' },
     });
     return;
   }
-  if (mysqlError?.code === 'ER_ROW_IS_REFERENCED_2') {
+
+  if (pgError?.code === '23P01') {
+    const overlap = pgError.constraint === 'subscriptions_no_overlap';
     res.status(409).json({
-      error: { code: 'IN_USE', message: 'This record is referenced by other data and cannot be removed.' },
+      error: {
+        code: 'CONFLICT',
+        message: overlap
+          ? 'This member already has a membership covering those dates.'
+          : 'That change conflicts with existing data.',
+      },
     });
     return;
   }
-  if (mysqlError?.code === 'ER_NO_REFERENCED_ROW_2') {
+
+  if (pgError?.code === '23503') {
+    res.status(409).json({
+      error: { code: 'IN_USE', message: 'This record is referenced by other data and cannot be changed.' },
+    });
+    return;
+  }
+
+  if (pgError?.code === '23514') {
     res.status(400).json({
-      error: { code: 'INVALID_REFERENCE', message: 'A related record could not be found.' },
+      error: { code: 'INVALID_VALUE', message: 'A value is outside the allowed range for this record.' },
     });
     return;
   }
+
+  if (pgError?.code === '23502') {
+    res.status(400).json({
+      error: { code: 'MISSING_VALUE', message: 'A required value is missing.' },
+    });
+    return;
+  }
+
+  if (pgError?.code === '22P02') {
+    res.status(400).json({
+      error: { code: 'INVALID_VALUE', message: 'One of the submitted values has the wrong format.' },
+    });
+    return;
+  }
+
   if (err instanceof SyntaxError && 'body' in err) {
     res.status(400).json({ error: { code: 'INVALID_JSON', message: 'The request body is not valid JSON.' } });
     return;

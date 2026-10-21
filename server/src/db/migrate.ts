@@ -1,33 +1,42 @@
-import { execute, pool, query } from './pool';
-import { migrations } from './migrations';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pool, query } from './pool';
+
+function findSqlFile(name: string): string {
+  const candidates = [
+    path.resolve(process.cwd(), '../supabase', name),
+    path.resolve(process.cwd(), 'supabase', name),
+    path.resolve(__dirname, '../../../supabase', name),
+  ];
+  const found = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!found) {
+    throw new Error(`Could not find supabase/${name}. Run this from the repository root or the server folder.`);
+  }
+  return found;
+}
 
 async function run() {
-  await execute(
-    `CREATE TABLE IF NOT EXISTS schema_migrations (
-      id VARCHAR(64) PRIMARY KEY,
-      applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-  );
+  const schemaPath = findSqlFile('schema.sql');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
 
-  const applied = await query<{ id: string }>('SELECT id FROM schema_migrations');
-  const appliedIds = new Set(applied.map((row) => row.id));
-
-  for (const migration of migrations) {
-    if (appliedIds.has(migration.id)) continue;
-    console.log(`→ applying ${migration.id}`);
-    for (const statement of migration.statements) {
-      await execute(statement);
-    }
-    await execute('INSERT INTO schema_migrations (id) VALUES (?)', [migration.id]);
-    console.log(`✓ ${migration.id}`);
-  }
-
+  console.log(`Applying ${path.relative(process.cwd(), schemaPath)}...`);
+  await query(schema);
   console.log('Database schema is up to date.');
+  await query(
+    `create table if not exists public.schema_migrations (
+       id text primary key,
+       applied_at timestamptz not null default now()
+     )`,
+  );
+  await query(
+    `insert into public.schema_migrations (id) values ('0001_supabase_schema')
+     on conflict (id) do nothing`,
+  );
 }
 
 run()
   .catch((error) => {
-    console.error('Migration failed:', error);
+    console.error('Migration failed:', error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
   .finally(async () => {

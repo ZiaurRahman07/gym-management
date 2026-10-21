@@ -26,7 +26,7 @@ const FIELD_MAP: Record<string, string> = {
 };
 
 export async function readSettings(): Promise<Record<string, string>> {
-  const rows = await query<{ key: string; value: string | null }>('SELECT `key`, `value` FROM settings');
+  const rows = await query<{ key: string; value: string | null }>('SELECT "key", "value" FROM settings');
   const map = { ...DEFAULTS };
   for (const row of rows) if (row.value !== null) map[row.key] = row.value;
   return map;
@@ -59,7 +59,20 @@ router.put(
         gymName: z.string().trim().min(1).max(120).optional(),
         currencyCode: z.string().trim().min(1).max(8).optional(),
         currencySymbol: z.string().trim().min(1).max(8).optional(),
-        timezone: z.string().trim().min(1).max(64).optional(),
+        timezone: z
+          .string()
+          .trim()
+          .min(1)
+          .max(64)
+          .refine((timezone) => {
+            try {
+              new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+              return true;
+            } catch {
+              return false;
+            }
+          }, 'Use an IANA timezone such as UTC or Asia/Dhaka.')
+          .optional(),
         alertLeadDays: z.coerce.number().int().min(1).max(60).optional(),
         allowExpiredCheckin: z.boolean().optional(),
       }),
@@ -71,7 +84,7 @@ router.put(
       const column = FIELD_MAP[key];
       if (!column) continue;
       const stored = typeof value === 'boolean' ? String(value) : String(value);
-      await queryOne('INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)', [
+      await queryOne('INSERT INTO settings ("key", "value") VALUES (?, ?) ON CONFLICT ("key") DO UPDATE SET "value" = excluded."value"', [
         column,
         stored,
       ]);

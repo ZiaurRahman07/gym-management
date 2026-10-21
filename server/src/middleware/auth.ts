@@ -18,7 +18,7 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
     throw new HttpError(401, 'TOKEN_EXPIRED', 'Your session has expired. Please sign in again.');
   }
 
-  const user = await queryOne<{ id: number; name: string; email: string; role: Role; is_active: number }>(
+  const user = await queryOne<{ id: number; name: string; email: string; role: Role; is_active: boolean }>(
     'SELECT id, name, email, role, is_active FROM users WHERE id = ?',
     [payload.sub],
   );

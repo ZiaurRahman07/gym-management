@@ -1,5 +1,5 @@
 -- ============================================================================
--- Iron Pulse — Gym Management
+-- Iron Pulse - Gym Management
 -- Supabase / PostgreSQL demo seed
 --
 -- Run AFTER supabase/schema.sql, on an empty project.
@@ -44,9 +44,9 @@ on conflict (key) do update set value = excluded.value;
 insert into public.plans (id, name, duration_days, price, description, is_active) values
   (1, 'Day Pass',   1,   12.00, 'Single day access to the gym floor.', true),
   (2, 'Monthly',    30,  45.00, 'Full gym access for 30 days.', true),
-  (3, 'Quarterly',  90,  120.00, 'Three months of full access — save 11%.', true),
-  (4, 'Half Year',  180, 210.00, 'Six months of full access — save 22%.', true),
-  (5, 'Annual',     365, 380.00, 'Best value — a full year of access.', true);
+  (3, 'Quarterly',  90,  120.00, 'Three months of full access, save 11%.', true),
+  (4, 'Half Year',  180, 210.00, 'Six months of full access, save 22%.', true),
+  (5, 'Annual',     365, 380.00, 'Best value: a full year of access.', true);
 
 -- ---------------------------------------------------------------- trainers
 

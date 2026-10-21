@@ -8,7 +8,7 @@ export async function logAudit(
   meta?: unknown,
 ): Promise<void> {
   try {
-    await execute('INSERT INTO audit_log (user_id, action, entity, entity_id, meta) VALUES (?, ?, ?, ?, ?)', [
+    await execute('INSERT INTO audit_log (user_id, action, entity, entity_id, meta) VALUES (?, ?, ?, ?, ?::jsonb)', [
       userId ?? null,
       action,
       entity,

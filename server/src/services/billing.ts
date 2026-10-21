@@ -1,4 +1,3 @@
-import type { ResultSetHeader } from 'mysql2/promise';
 import { txExecute, txOne, type Conn } from '../db/pool';
 import { badRequest, conflict, notFound } from '../lib/errors';
 import { addDays, round2, toDateStr, toSqlDateTime, todayStr } from '../lib/helpers';
@@ -77,7 +76,7 @@ export async function createSubscriptionTx(
   if (!member) throw notFound('Member not found.');
   if (member.status === 'blocked') throw badRequest('This member is blocked and cannot purchase a membership.');
 
-  const plan = await txOne<{ id: number; name: string; duration_days: number; price: number; is_active: number }>(
+  const plan = await txOne<{ id: number; name: string; duration_days: number; price: number; is_active: boolean }>(
     conn,
     'SELECT id, name, duration_days, price, is_active FROM plans WHERE id = ?',
     [input.planId],
@@ -88,7 +87,7 @@ export async function createSubscriptionTx(
   const existing = await txOne<{ id: number; end_date: string; status: string }>(
     conn,
     `SELECT id, end_date, status FROM subscriptions
-     WHERE member_id = ? AND (status = 'active' AND end_date >= CURDATE() OR status = 'frozen')
+     WHERE member_id = ? AND (status = 'active' AND end_date >= CURRENT_DATE OR status = 'frozen')
      ORDER BY end_date DESC LIMIT 1`,
     [input.memberId],
   );
@@ -137,7 +136,7 @@ export async function createSubscriptionTx(
       amount: input.payment.amount ?? finalAmount,
       method: input.payment.method,
       paidAt: input.payment.paidAt,
-      notes: input.payment.notes ?? `Membership — ${plan.name}`,
+      notes: input.payment.notes ?? `Membership  -  ${plan.name}`,
       recordedBy: input.actorId,
     });
     paymentId = payment.id;
@@ -174,7 +173,7 @@ export async function unfreezeSubscriptionTx(conn: Conn, id: number): Promise<vo
   if (!sub) throw notFound('Membership not found.');
   if (sub.status !== 'frozen') throw badRequest('This membership is not frozen.');
 
-  const frozenAt = sub.frozen_at ? new Date(sub.frozen_at.replace(' ', 'T')) : new Date();
+  const frozenAt = sub.frozen_at ? new Date(sub.frozen_at) : new Date();
   const now = new Date();
   const frozenDays = Math.max(0, Math.ceil((now.getTime() - frozenAt.getTime()) / 86_400_000));
   const newEnd = addDays(sub.end_date, frozenDays);

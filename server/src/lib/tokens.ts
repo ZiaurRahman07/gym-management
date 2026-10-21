@@ -34,8 +34,8 @@ export function verifyRefreshToken(token: string): RefreshPayload {
 
 export const refreshCookieOptions = {
   httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: env.NODE_ENV === 'production',
+  sameSite: env.COOKIE_SAMESITE,
+  secure: env.NODE_ENV === 'production' || env.COOKIE_SAMESITE === 'none',
   path: '/api/auth',
   maxAge: REFRESH_TTL * 1000,
 };

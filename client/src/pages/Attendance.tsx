@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { api } from '../api/endpoints';
 import type { Member } from '../api/types';
-import { Icon } from '../components/Icon';
 import { MemberPicker } from '../components/MemberPicker';
 import { Avatar, Badge, EmptyState, PageHead, Pagination, SearchInput, StatCard } from '../components/ui';
 import { useToast } from '../context/ToastContext';
@@ -44,7 +43,7 @@ export function Attendance() {
   const recent = todayData?.recent ?? [];
 
   const peakHour = (() => {
-    if (!recent.length) return '—';
+    if (!recent.length) return 'No visits';
     const counts = new Map<number, number>();
     for (const record of recent) {
       const hour = new Date(record.checkInAt.replace(' ', 'T')).getHours();
@@ -90,16 +89,15 @@ export function Attendance() {
         subtitle="Check members in, watch the floor and review visit history."
         actions={
           <button type="button" className="btn btn-outline" onClick={() => today.reload()}>
-            <Icon name="refresh" size={15} />
             Refresh
           </button>
         }
       />
 
       <div className="stat-grid stat-grid-3">
-        <StatCard label="Check-ins today" value={today.loading ? '—' : (todayData?.todayCount ?? 0)} icon="attendance" tone="blue" />
-        <StatCard label="Currently in the gym" value={today.loading ? '—' : (todayData?.insideCount ?? 0)} icon="members" tone="teal" />
-        <StatCard label="Busiest hour" value={peakHour} icon="clock" tone="violet" foot="Based on today's check-ins" />
+        <StatCard label="Check-ins today" value={today.loading ? '...' : (todayData?.todayCount ?? 0)} />
+        <StatCard label="Currently in the gym" value={today.loading ? '...' : (todayData?.insideCount ?? 0)} />
+        <StatCard label="Busiest hour" value={peakHour} foot="Based on today's check-ins" />
       </div>
 
       <div className="two-col">
@@ -128,9 +126,8 @@ export function Attendance() {
 
           {member && member.membershipStatus !== 'active' && (
             <div className="alert alert-warning" style={{ marginTop: 12 }}>
-              <Icon name="alert" size={16} />
               <span>
-                This member's membership is {memberMeta?.label.toLowerCase()}. Renew it before checking in — expired
+                This member's membership is {memberMeta?.label.toLowerCase()}. Renew it before checking in. Expired
                 entries are rejected unless your gym allows them in Settings.
               </span>
             </div>
@@ -143,7 +140,7 @@ export function Attendance() {
             disabled={!member || checkingIn}
             onClick={checkIn}
           >
-            {checkingIn ? <span className="spinner" /> : <Icon name="check" size={17} />}
+            {checkingIn ? <span className="spinner" /> : null}
             Check in member
           </button>
 
@@ -164,7 +161,7 @@ export function Attendance() {
             <Badge tone={inside.length ? 'success' : 'muted'}>{inside.length ? 'Live' : 'Empty'}</Badge>
           </div>
           {inside.length === 0 ? (
-            <EmptyState icon="attendance" title="Nobody is in yet" message="Check-ins will appear here in real time." />
+            <EmptyState title="Nobody is in yet" message="Check-ins will appear here in real time." />
           ) : (
             <div className="list" style={{ maxHeight: 330, overflowY: 'auto' }}>
               {inside.map((record) => (
@@ -231,7 +228,7 @@ export function Attendance() {
               {recent.length === 0 && (
                 <tr>
                   <td colSpan={5}>
-                    <EmptyState icon="attendance" title="No check-ins today" message="Start with the quick check-in above." />
+                    <EmptyState title="No check-ins today" message="Start with the quick check-in above." />
                   </td>
                 </tr>
               )}
@@ -296,7 +293,7 @@ export function Attendance() {
               {!history.loading && (history.data?.data ?? []).length === 0 && (
                 <tr>
                   <td colSpan={5}>
-                    <EmptyState icon="calendar" title="No visits found" message="Try a different date or search term." />
+                    <EmptyState title="No visits found" message="Try a different date or search term." />
                   </td>
                 </tr>
               )}

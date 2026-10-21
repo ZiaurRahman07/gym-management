@@ -1,8 +1,8 @@
 -- ============================================================================
--- Iron Pulse — Gym Management
+-- Iron Pulse - Gym Management
 -- Supabase / PostgreSQL schema
 --
--- Run this first in Supabase Studio → SQL Editor (or `supabase db push`).
+-- Run this first in Supabase Studio -> SQL Editor (or `supabase db push`).
 -- Then run supabase/seed.sql for a demo roster.
 --
 -- Notes:

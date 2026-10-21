@@ -2,7 +2,10 @@
   "name": "gym-management-system",
   "version": "1.0.0",
   "private": true,
-  "description": "Gym management system — members, memberships, payments, trainers, attendance",
+  "description": "Gym management system - members, memberships, payments, trainers, attendance",
+  "engines": {
+    "node": ">=20"
+  },
   "workspaces": [
     "server",
     "client"
@@ -15,8 +18,9 @@
     "start": "npm run start --workspace server",
     "db:migrate": "npm run db:migrate --workspace server",
     "db:seed": "npm run db:seed --workspace server",
-    "db:start": "powershell -ExecutionPolicy Bypass -File scripts/start-db.ps1",
-    "db:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-db.ps1"
+    "db:user": "npm run db:user --workspace server --",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
